@@ -1,0 +1,19 @@
+# Next.js
+vitrine-elite/site/.next/
+vitrine-elite/site/out/
+
+# Dependencies
+node_modules/
+vitrine-elite/site/node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
