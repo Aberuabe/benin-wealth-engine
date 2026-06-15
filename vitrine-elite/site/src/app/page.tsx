@@ -1,7 +1,7 @@
 "use client";
 
-import { motion, useScroll, useSpring, useTransform } from "framer-motion";
-import { useEffect, useState, useRef } from "react";
+import { motion, useScroll, useSpring, useTransform, useMotionValue } from "framer-motion";
+import { useEffect } from "react";
 import { 
   Zap, 
   ShieldCheck, 
@@ -36,7 +36,13 @@ const stagger = {
 };
 
 export default function Home() {
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  const springConfig = { stiffness: 150, damping: 25, mass: 0.5 };
+  const cursorX = useSpring(mouseX, springConfig);
+  const cursorY = useSpring(mouseY, springConfig);
+
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
     stiffness: 100,
@@ -46,11 +52,12 @@ export default function Home() {
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
+      mouseX.set(e.clientX - 192); // 192 is half of w-96 (192px)
+      mouseY.set(e.clientY - 192);
     };
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
+  }, [mouseX, mouseY]);
 
   const mailTo = "mailto:dotonouabel@gmail.com?subject=Demande d'Audit Conversion - Vitrine d'Élite&body=Bonjour Abel, je souhaite doubler mes conversions...";
   const whatsappUrl = "https://wa.me/2290167750083?text=Bonjour%20Abel,%20je%20souhaite%20en%20savoir%20plus%20sur%20tes%20machines%20à%20cash.";
@@ -62,14 +69,13 @@ export default function Home() {
       {/* BARRE DE PROGRESSION */}
       <motion.div className="fixed top-0 left-0 right-0 h-[2px] bg-elite-gold z-[100] origin-left" style={{ scaleX }} />
 
-      {/* CURSEUR LUMINEUX (FOLLOW MOUSE) */}
+      {/* CURSEUR LUMINEUX (FOLLOW MOUSE) - GPU ACCELERATED */}
       <motion.div 
         className="fixed top-0 left-0 w-96 h-96 bg-elite-gold/10 rounded-full blur-[100px] pointer-events-none z-0 hidden lg:block"
-        animate={{
-          x: mousePos.x - 192,
-          y: mousePos.y - 192,
+        style={{
+          x: cursorX,
+          y: cursorY,
         }}
-        transition={{ type: "spring", damping: 25, stiffness: 150, mass: 0.5 }}
       />
 
       {/* BOUTON WHATSAPP FLOTTANT */}
@@ -126,7 +132,7 @@ export default function Home() {
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-                className="text-4xl md:text-[7.5rem] font-display font-medium leading-[0.85] tracking-tighter"
+                className="text-4xl md:text-[clamp(2.5rem,7vw,7.5rem)] font-display font-medium leading-[0.9] md:leading-[0.85] tracking-tighter"
               >
                 Vos réseaux sont une location. <br />
                 <span className="gold-gradient italic">Bâtissez votre empire.</span>
@@ -221,6 +227,151 @@ export default function Home() {
                   </p>
                 </motion.div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION RÉALISATIONS (SHOWCASE PROJETS) */}
+        <section id="realisations" className="py-32 px-6 relative">
+          <div className="max-w-6xl mx-auto text-center">
+            <motion.div {...fadeIn} className="mb-20">
+              <h2 className="text-4xl md:text-7xl font-display font-bold leading-tight tracking-tight">Systèmes Déployés.</h2>
+              <p className="text-stone-500 uppercase tracking-[0.5em] text-xs font-bold mt-4">Preuves réelles d'ingénierie transactionnelle</p>
+            </motion.div>
+
+            <div className="grid md:grid-cols-2 gap-12 text-left">
+              {/* CARD 1: SAFE-DEAL BÉNIN */}
+              <motion.div 
+                {...fadeIn}
+                whileHover={{ y: -10 }}
+                className="liquid-glass rounded-[2.5rem] border-white/5 overflow-hidden flex flex-col group"
+              >
+                {/* Visual Header / Mockup */}
+                <div className="relative aspect-video bg-gradient-to-br from-elite-black to-stone-900 border-b border-white/5 flex items-center justify-center p-6 overflow-hidden">
+                  <div className="absolute inset-0 bg-elite-gold/5 group-hover:bg-elite-gold/10 transition-colors duration-500" />
+                  
+                  {/* Smartphone Mockup */}
+                  <div className="relative w-48 h-64 bg-stone-950 border-[4px] border-stone-850 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col transition-transform duration-500 group-hover:scale-105">
+                    {/* Notch */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-4 bg-stone-850 rounded-b-xl z-20" />
+                    
+                    {/* Screen Content */}
+                    <div className="flex-1 p-4 flex flex-col justify-between pt-6 text-left relative z-10 bg-[#0A0A0A]">
+                      {/* Top Header */}
+                      <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                        <span className="text-[8px] font-bold tracking-widest uppercase text-elite-gold">Safe-Deal</span>
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      </div>
+                      
+                      {/* Escrow Widget */}
+                      <div className="my-auto space-y-3">
+                        <div className="space-y-1">
+                          <p className="text-[6px] text-stone-500 uppercase">Montant Garanti</p>
+                          <p className="text-sm font-bold text-white">150 000 FCFA</p>
+                        </div>
+                        <div className="p-2 bg-stone-900/50 rounded-lg border border-elite-gold/20 space-y-1">
+                          <div className="flex justify-between text-[6px]">
+                            <span className="text-stone-400">Acheteur:</span>
+                            <span className="text-white font-medium">Cotonou VIP</span>
+                          </div>
+                          <div className="flex justify-between text-[6px]">
+                            <span className="text-stone-400">Statut:</span>
+                            <span className="text-elite-gold font-bold">Fonds Séquestrés 🔒</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* MoMo logo/button */}
+                      <div className="w-full bg-elite-gold text-black rounded-lg py-1.5 text-center text-[7px] font-bold">
+                        Paiement MTN MoMo Validé
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-8 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-[10px] font-bold tracking-widest uppercase text-elite-gold bg-elite-gold/10 px-3 py-1 rounded-full">Fintech & Escrow</span>
+                    </div>
+                    <h3 className="text-2xl font-display font-semibold mb-3 group-hover:text-elite-gold transition-colors">Safe-Deal Bénin</h3>
+                    <p className="text-stone-400 font-light leading-relaxed text-sm mb-6">
+                      Système de séquestre (tiers de confiance) sécurisant les transactions entre particuliers. Intègre les API Mobile Money locales (MTN, Moov) via FedaPay pour lever le frein de la confiance en Afrique de l'Ouest.
+                    </p>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {["Next.js 15", "Drizzle ORM", "FedaPay API", "PostgreSQL"].map((tag, i) => (
+                      <span key={i} className="px-3 py-1 text-[10px] bg-white/5 border border-white/10 rounded-md text-stone-300">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* CARD 2: FADJI */}
+              <motion.div 
+                {...fadeIn}
+                transition={{ delay: 0.2 }}
+                whileHover={{ y: -10 }}
+                className="liquid-glass rounded-[2.5rem] border-white/5 overflow-hidden flex flex-col group"
+              >
+                {/* Visual Header / Mockup */}
+                <div className="relative aspect-video bg-gradient-to-br from-elite-black to-stone-900 border-b border-white/5 flex items-center justify-center p-6 overflow-hidden">
+                  <div className="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition-colors duration-500" />
+                  
+                  {/* Web App Dashboard Mockup */}
+                  <div className="relative w-64 h-40 bg-stone-950 border-[3px] border-stone-850 rounded-xl shadow-2xl overflow-hidden flex flex-col transition-transform duration-500 group-hover:scale-105">
+                    {/* Browser Header */}
+                    <div className="h-4 bg-stone-900 flex items-center gap-1.5 px-2 border-b border-white/5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                    </div>
+                    
+                    {/* Dashboard Screen */}
+                    <div className="flex-1 p-3 flex flex-col justify-between text-left bg-[#0A0A0A]">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[7px] font-bold text-stone-300">FADJI — Tontine 2.0</span>
+                        <span className="text-[6px] text-stone-500">Membres: 12/15</span>
+                      </div>
+                      
+                      {/* Chart placeholder */}
+                      <div className="h-12 flex items-end gap-1.5 border-b border-white/5 pb-1 justify-center">
+                        <div className="w-3 h-4 bg-stone-800 rounded-t" />
+                        <div className="w-3 h-6 bg-stone-800 rounded-t" />
+                        <div className="w-3 h-8 bg-stone-800 rounded-t" />
+                        <div className="w-3 h-10 bg-elite-gold rounded-t shadow-[0_0_10px_rgba(202,138,4,0.3)]" />
+                      </div>
+                      
+                      {/* Stats */}
+                      <div className="flex justify-between text-[6px]">
+                        <span className="text-stone-400">Pot Total: 3 600 000 FCFA</span>
+                        <span className="text-green-400">Prochain tirage: 20 Juin</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-8 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-[10px] font-bold tracking-widest uppercase text-elite-gold bg-elite-gold/10 px-3 py-1 rounded-full">Tontine Digitale</span>
+                    </div>
+                    <h3 className="text-2xl font-display font-semibold mb-3 group-hover:text-elite-gold transition-colors">FADJI</h3>
+                    <p className="text-stone-400 font-light leading-relaxed text-sm mb-6">
+                      Digitalisation de l'épargne solidaire traditionnelle (tontine) pour les communautés d'affaires. Automatise la collecte des cotisations, les tirages au sort équitables et la redistribution instantanée.
+                    </p>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {["Django", "Python", "PostgreSQL", "Tailwind CSS"].map((tag, i) => (
+                      <span key={i} className="px-3 py-1 text-[10px] bg-white/5 border border-white/10 rounded-md text-stone-300">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
             </div>
           </div>
         </section>
