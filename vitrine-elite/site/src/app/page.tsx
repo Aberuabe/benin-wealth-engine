@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useScroll, useSpring, useTransform, useMotionValue } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { 
   Zap, 
   ShieldCheck, 
@@ -35,6 +35,471 @@ const stagger = {
   }
 };
 
+// SPOTLIGHT CARD COMPONENT (Cursor radial light overlay)
+function SpotlightCard({ children, className = "" }: { children: React.ReactNode, className?: string }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    setCoords({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`relative overflow-hidden ${className}`}
+    >
+      {isHovered && (
+        <div
+          className="pointer-events-none absolute -inset-px rounded-[inherit] transition-opacity duration-300 z-10"
+          style={{
+            background: `radial-gradient(400px circle at ${coords.x}px ${coords.y}px, rgba(202, 138, 4, 0.15), transparent 80%)`,
+          }}
+        />
+      )}
+      {children}
+    </div>
+  );
+}
+
+// MAGNETIC BUTTON COMPONENT (Attracts button slightly to mouse)
+function MagneticButton({ children, className = "", onClick, href, target }: { children: React.ReactNode, className?: string, onClick?: () => void, href?: string, target?: string }) {
+  const btnRef = useRef<HTMLButtonElement & HTMLAnchorElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const springX = useSpring(x, { stiffness: 100, damping: 15 });
+  const springY = useSpring(y, { stiffness: 100, damping: 15 });
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!btnRef.current) return;
+    const { clientX, clientY } = e;
+    const { left, top, width, height } = btnRef.current.getBoundingClientRect();
+    const centerX = left + width / 2;
+    const centerY = top + height / 2;
+    
+    const distanceX = clientX - centerX;
+    const distanceY = clientY - centerY;
+
+    x.set(distanceX * 0.35);
+    y.set(distanceY * 0.35);
+  };
+
+  const handleMouseLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  if (href) {
+    return (
+      <motion.a
+        ref={btnRef}
+        href={href}
+        target={target}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{ x: springX, y: springY }}
+        className={className}
+      >
+        {children}
+      </motion.a>
+    );
+  }
+
+  return (
+    <motion.button
+      ref={btnRef}
+      onClick={onClick}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{ x: springX, y: springY }}
+      className={className}
+    >
+      {children}
+    </motion.button>
+  );
+}
+
+// --- INTERACTIVE ROI SIMULATOR COMPONENT ---
+interface RoiSimulatorProps {
+  onCtaClick: (presetMsg: string) => void;
+}
+
+function RoiSimulator({ onCtaClick }: RoiSimulatorProps) {
+  const [traffic, setTraffic] = useState(5000);
+  const [conversion, setConversion] = useState(1.2);
+  const [basket, setBasket] = useState(30000);
+
+  const currentRevenue = Math.round(traffic * (conversion / 100) * basket);
+  const optimizedRevenue = Math.round(traffic * (3.5 / 100) * basket);
+  const lostGain = optimizedRevenue - currentRevenue;
+
+  const formatFCFA = (val: number) => {
+    return new Intl.NumberFormat("fr-BJ", {
+      style: "currency",
+      currency: "XOF",
+      maximumFractionDigits: 0,
+    })
+      .format(val)
+      .replace("XOF", "FCFA");
+  };
+
+  const handleAction = () => {
+    const presetMsg = `Bonjour Abel, mon simulateur indique un manque à gagner de ${formatFCFA(lostGain)} par mois avec un trafic de ${traffic.toLocaleString("fr-FR")} visiteurs, un taux de conversion actuel de ${conversion}% et un panier moyen de ${formatFCFA(basket)}. Je veux récupérer ce manque à gagner !`;
+    onCtaClick(presetMsg);
+  };
+
+  return (
+    <div className="liquid-glass p-8 md:p-12 rounded-[2.5rem] border-white/5 relative overflow-hidden max-w-4xl mx-auto text-left">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-elite-gold/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="grid md:grid-cols-2 gap-12 items-center">
+        <div className="space-y-8">
+          <div>
+            <span className="text-[10px] font-bold tracking-widest uppercase text-elite-gold bg-elite-gold/10 px-3 py-1 rounded-full">
+              Simulateur de Conversion
+            </span>
+            <h3 className="text-3xl font-display font-bold mt-4 mb-2">
+              Calculez votre manque à gagner
+            </h3>
+            <p className="text-stone-400 text-sm font-light leading-relaxed">
+              Ajustez les curseurs pour voir l'impact immédiat d'une refonte Next.js optimisée à un taux standard de 3.5% sur votre chiffre d'affaires.
+            </p>
+          </div>
+
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-stone-300">Trafic Mensuel (Visiteurs)</span>
+                <span className="text-white font-mono">{traffic.toLocaleString("fr-FR")} / mois</span>
+              </div>
+              <input
+                type="range"
+                min="500"
+                max="50000"
+                step="500"
+                value={traffic}
+                onChange={(e) => setTraffic(Number(e.target.value))}
+                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-elite-gold"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-stone-300">Taux de Conversion Actuel</span>
+                <span className="text-white font-mono">{conversion}%</span>
+              </div>
+              <input
+                type="range"
+                min="0.2"
+                max="5.0"
+                step="0.1"
+                value={conversion}
+                onChange={(e) => setConversion(Number(e.target.value))}
+                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-elite-gold"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-stone-300">Panier Moyen (FCFA)</span>
+                <span className="text-white font-mono">{basket.toLocaleString("fr-FR")} FCFA</span>
+              </div>
+              <input
+                type="range"
+                min="5000"
+                max="200000"
+                step="5000"
+                value={basket}
+                onChange={(e) => setBasket(Number(e.target.value))}
+                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-elite-gold"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-elite-black/40 border border-white/5 rounded-3xl p-8 space-y-6 flex flex-col justify-between h-full relative">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center border-b border-white/5 pb-3">
+              <span className="text-xs text-stone-400">Revenus mensuels estimés :</span>
+              <span className="text-sm font-mono text-stone-300">{formatFCFA(currentRevenue)}</span>
+            </div>
+            <div className="flex justify-between items-center border-b border-white/5 pb-3">
+              <span className="text-xs text-stone-400">Revenus à 3.5% (Vitrine d'Élite) :</span>
+              <span className="text-sm font-mono text-green-400 font-semibold">
+                {formatFCFA(optimizedRevenue)}
+              </span>
+            </div>
+            <div className="pt-4 space-y-2">
+              <span className="text-[10px] uppercase tracking-wider text-rose-500 font-bold block">
+                Manque à gagner mensuel :
+              </span>
+              <div className="text-3xl md:text-4xl font-display font-bold text-rose-500 font-mono drop-shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                - {formatFCFA(lostGain)}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleAction}
+            className="w-full bg-elite-gold hover:bg-elite-gold-light text-black py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-elite-gold/15 mt-6"
+          >
+            Récupérer ce chiffre
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- INTERACTIVE PROTOTYPE SANDBOX COMPONENT ---
+function PrototypeSandbox() {
+  const [formData, setFormData] = useState({ name: "", guests: 2, time: "20:00" });
+  const [stage, setStage] = useState<"form" | "sent" | "reception">("form");
+  const [notification, setNotification] = useState("");
+
+  const handleSimulateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setStage("sent");
+    setNotification(
+      `Nouvelle réservation de ${formData.name} pour ${formData.guests} personnes à ${formData.time}.`
+    );
+
+    // Simulate progression to the reception dashboard
+    setTimeout(() => {
+      setStage("reception");
+    }, 2000);
+  };
+
+  const resetSandbox = () => {
+    setFormData({ name: "", guests: 2, time: "20:00" });
+    setStage("form");
+  };
+
+  return (
+    <div className="liquid-glass p-8 md:p-12 rounded-[2.5rem] border-white/5 relative overflow-hidden max-w-4xl mx-auto text-left">
+      <div className="absolute top-0 left-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="grid md:grid-cols-2 gap-12 items-center">
+        <div>
+          <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full">
+            Démonstration Interactive
+          </span>
+          <h3 className="text-3xl md:text-4xl font-display font-bold mt-4 mb-2">
+            Testez le moteur de réservation
+          </h3>
+          <p className="text-stone-400 text-sm font-light leading-relaxed mb-6">
+            Voici une simulation en temps réel du flux automatisé conçu pour l'<strong>Hôtel Maison Rouge</strong>. Remplissez le formulaire de gauche pour voir l'automatisation s'exécuter instantanément à droite.
+          </p>
+          <div className="space-y-4 text-xs text-stone-400">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Vitesse Next.js instantanée (aucune latence au clic).</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Notification immédiate sur le canal interne de la réception.</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Confirmation WhatsApp pré-remplie envoyée au client.</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-elite-black/40 border border-white/5 rounded-3xl p-6 relative min-h-[350px] flex flex-col justify-between overflow-hidden">
+          {stage === "form" && (
+            <form onSubmit={handleSimulateSubmit} className="space-y-4">
+              <div className="text-center pb-2 border-b border-white/5">
+                <span className="text-[10px] uppercase tracking-wider text-stone-400 font-bold block">
+                  Interface Client (Réservation Table)
+                </span>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                  Nom Complet
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-elite-gold transition-colors text-white"
+                  placeholder="Ex: Christian L."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                    Couverts
+                  </label>
+                  <select
+                    value={formData.guests}
+                    onChange={(e) => setFormData({ ...formData, guests: Number(e.target.value) })}
+                    className="w-full bg-stone-900 border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-elite-gold text-white"
+                  >
+                    {[1, 2, 3, 4, 5, 6].map((num) => (
+                      <option key={num} value={num}>
+                        {num} {num > 1 ? "personnes" : "personne"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                    Heure
+                  </label>
+                  <input
+                    type="time"
+                    value={formData.time}
+                    onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-elite-gold text-white"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-elite-gold text-black py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer mt-4"
+              >
+                Réserver ma table
+              </button>
+            </form>
+          )}
+
+          {stage === "sent" && (
+            <div className="flex-grow flex flex-col items-center justify-center text-center space-y-4">
+              <div className="w-12 h-12 border-2 border-elite-gold border-t-transparent rounded-full animate-spin" />
+              <div>
+                <h4 className="text-sm font-bold text-white">Traitement de l'automatisation...</h4>
+                <p className="text-stone-500 text-[10px] mt-1">
+                  Génération de la notification et routage instantané
+                </p>
+              </div>
+            </div>
+          )}
+
+          {stage === "reception" && (
+            <div className="flex-grow flex flex-col justify-between space-y-6">
+              <div className="space-y-4">
+                <div className="text-center pb-2 border-b border-white/5">
+                  <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-bold block">
+                    Flux d'Automatisation Activé
+                  </span>
+                </div>
+
+                {/* Simulated Telegram Notification */}
+                <div className="p-3 bg-blue-950/20 border border-blue-500/20 rounded-xl space-y-1 text-left animate-slide-in">
+                  <div className="flex justify-between items-center text-[8px] text-blue-400 font-bold">
+                    <span>💬 TELEGRAM RUPTURE INTERNE</span>
+                    <span>À l'instant</span>
+                  </div>
+                  <p className="text-[11px] text-white font-mono">
+                    🚨 <strong>Nouvelle réservation !</strong>
+                    <br />
+                    Client : {formData.name}
+                    <br />
+                    Détail : {formData.guests} couverts à {formData.time}
+                  </p>
+                </div>
+
+                {/* Simulated WhatsApp SMS Client Confirmation */}
+                <div className="p-3 bg-emerald-950/20 border border-emerald-500/20 rounded-xl space-y-1 text-left animate-slide-in-delay">
+                  <div className="flex justify-between items-center text-[8px] text-emerald-400 font-bold">
+                    <span>💬 CONFIRMATION CLIENT (WhatsApp/SMS)</span>
+                    <span>À l'instant</span>
+                  </div>
+                  <p className="text-[11px] text-stone-300">
+                    "Bonjour {formData.name}, votre réservation pour {formData.guests} personnes ce soir à{" "}
+                    {formData.time} à l'Hôtel Maison Rouge est confirmée. À tout à l'heure !"
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={resetSandbox}
+                className="w-full border border-white/10 hover:border-white/20 text-stone-400 hover:text-white py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer"
+              >
+                Réessayer la simulation
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- FAQ ACCORDION COMPONENT ---
+function FaqAccordion() {
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+
+  const faqs = [
+    {
+      q: "Pourquoi Next.js plutôt que WordPress ou Shopify ?",
+      a: "WordPress est lourd, nécessite des mises à jour constantes pour éviter les piratages et met souvent 3 à 5 secondes à charger sur mobile au Bénin. J'utilise Next.js (la technologie de pointe de Netflix et TikTok). Votre site se charge en moins d'une seconde, ce qui empêche vos clients de quitter la page par impatience. De plus, il est nativement sécurisé et offre un référencement local optimal.",
+    },
+    {
+      q: "Y a-t-il des frais récurrents ou des abonnements ?",
+      a: "Non, il n'y a pas d'abonnement coûteux. L'hébergement de votre site sur Vercel est gratuit. Les seuls frais minimes à prévoir concernent les envois de SMS/WhatsApp de confirmation via les passerelles d'API (environ 5 à 10 FCFA par message envoyé). Le système est conçu pour être le plus économique possible.",
+    },
+    {
+      q: "Quelle est la garantie de livraison et de résultats ?",
+      a: "Pour prouver mon sérieux, je propose la phase 1 (le Prototype) entièrement gratuitement. Je conçois la maquette visuelle complète de votre nouveau flux de réservation. Vous ne payez les 250 000 FCFA que lorsque vous validez le prototype et que nous passons à la phase d'intégration technique et d'automatisation.",
+    },
+    {
+      q: "Comment fonctionne l'automatisation concrètement pour mon équipe ?",
+      a: "C'est 100% transparent. Le client réserve en 3 clics sur mobile. Il reçoit une confirmation WhatsApp automatique. Votre équipe reçoit une notification immédiate sur son téléphone (via Telegram ou WhatsApp interne) avec les détails, et la réservation s'ajoute automatiquement à un tableau de suivi partagé. Zéro action manuelle requise.",
+    },
+  ];
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-4 text-left">
+      {faqs.map((faq, i) => {
+        const isOpen = openIdx === i;
+        return (
+          <div
+            key={i}
+            className="liquid-glass rounded-2xl border-white/5 overflow-hidden transition-all duration-300"
+          >
+            <button
+              onClick={() => setOpenIdx(isOpen ? null : i)}
+              className="w-full p-6 text-left flex justify-between items-center gap-4 hover:bg-white/[0.02] transition-colors"
+            >
+              <h4 className="font-display font-semibold text-lg md:text-xl text-white">
+                {faq.q}
+              </h4>
+              <span
+                className={`w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-stone-400 font-bold transition-transform duration-300 ${
+                  isOpen ? "rotate-45" : ""
+                }`}
+              >
+                ＋
+              </span>
+            </button>
+            <motion.div
+              initial={false}
+              animate={{ height: isOpen ? "auto" : 0, opacity: isOpen ? 1 : 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              <div className="p-6 pt-0 text-stone-400 text-sm font-light leading-relaxed border-t border-white/5">
+                {faq.a}
+              </div>
+            </motion.div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Home() {
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
@@ -47,7 +512,7 @@ export default function Home() {
   const scaleX = useSpring(scrollYProgress, {
     stiffness: 100,
     damping: 30,
-    restDelta: 0.001
+    restDelta: 0.001,
   });
 
   useEffect(() => {
@@ -59,8 +524,45 @@ export default function Home() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [mouseX, mouseY]);
 
-  const mailTo = "mailto:dotonouabel@gmail.com?subject=Demande d'Audit Conversion - Vitrine d'Élite&body=Bonjour Abel, je souhaite doubler mes conversions...";
-  const whatsappUrl = "https://wa.me/2290167750083?text=Bonjour%20Abel,%20je%20souhaite%20en%20savoir%20plus%20sur%20tes%20machines%20à%20cash.";
+  const mailTo =
+    "mailto:dotonouabel@gmail.com?subject=Demande d'Audit Conversion - Vitrine d'Élite&body=Bonjour Abel, je souhaite doubler mes conversions...";
+  const whatsappUrl =
+    "https://wa.me/2290167750083?text=Bonjour%20Abel,%20je%20souhaite%20en%20savoir%20plus%20sur%20tes%20machines%20à%20cash.";
+
+  // MODAL & FORM STATES
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({ name: "", email: "", site: "", message: "" });
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const openModalWithPresetMessage = (presetMsg: string) => {
+    setFormData((prev) => ({ ...prev, message: presetMsg }));
+    setIsModalOpen(true);
+  };
+
+  const handleFormChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitted(true);
+
+    const messageText = `Bonjour Abel, je suis ${formData.name}. Je souhaite obtenir un audit de conversion pour mon site : ${
+      formData.site || "Non spécifié"
+    }.\n\nMessage : ${formData.message || "Bonjour, je souhaite doubler mes conversions."}`;
+    const encodedText = encodeURIComponent(messageText);
+    const waUrl = `https://wa.me/2290167750083?text=${encodedText}`;
+
+    setTimeout(() => {
+      window.open(waUrl, "_blank");
+      setIsModalOpen(false);
+      setIsSubmitted(false);
+      setFormData({ name: "", email: "", site: "", message: "" });
+    }, 1500);
+  };
+
 
   return (
     <div className="min-h-screen selection:bg-elite-gold selection:text-black relative bg-elite-black text-white overflow-x-hidden">
@@ -111,14 +613,12 @@ export default function Home() {
           
           <div className="flex items-center gap-6 sm:gap-10">
             <a href="#tech-stack" className="text-[10px] uppercase tracking-[0.2em] font-medium hover:text-elite-gold transition-colors">Tech Stack</a>
-            <motion.a 
-              whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(202, 138, 4, 0.4)" }}
-              whileTap={{ scale: 0.95 }}
-              href={mailTo} 
-              className="bg-elite-gold text-black text-[10px] uppercase tracking-[0.2em] font-bold px-5 py-2 rounded-full transition-all"
+            <MagneticButton 
+              onClick={() => setIsModalOpen(true)} 
+              className="bg-elite-gold text-black text-[10px] uppercase tracking-[0.2em] font-bold px-5 py-2 rounded-full transition-all cursor-pointer shadow-md shadow-elite-gold/10"
             >
               Audit Flash
-            </motion.a>
+            </MagneticButton>
           </div>
         </motion.div>
       </nav>
@@ -154,15 +654,13 @@ export default function Home() {
               transition={{ duration: 0.8, delay: 0.8 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-6"
             >
-              <motion.a 
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                href={mailTo} 
-                className="group relative bg-elite-gold text-black px-12 py-6 rounded-full font-bold text-sm uppercase tracking-widest overflow-hidden transition-all hover:pr-16 text-center w-full sm:w-auto"
+              <MagneticButton 
+                onClick={() => setIsModalOpen(true)} 
+                className="group relative bg-elite-gold text-black px-12 py-6 rounded-full font-bold text-sm uppercase tracking-widest overflow-hidden transition-all hover:pr-16 text-center w-full sm:w-auto cursor-pointer shadow-lg shadow-elite-gold/15"
               >
                 <span className="relative z-10">Lancer l'Audit Gratuit</span>
                 <ArrowRight className="absolute right-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300" />
-              </motion.a>
+              </MagneticButton>
               <a 
                 href="https://portofolio-mxxn.vercel.app" 
                 target="_blank"
@@ -228,6 +726,13 @@ export default function Home() {
                 </motion.div>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* ROI SIMULATOR SECTION */}
+        <section className="py-16 px-6 relative overflow-hidden">
+          <div className="max-w-6xl mx-auto text-center">
+            <RoiSimulator onCtaClick={openModalWithPresetMessage} />
           </div>
         </section>
 
@@ -376,6 +881,13 @@ export default function Home() {
           </div>
         </section>
 
+        {/* PROTOTYPE SANDBOX SECTION */}
+        <section className="py-16 px-6 relative overflow-hidden bg-elite-stone/20">
+          <div className="max-w-6xl mx-auto text-center">
+            <PrototypeSandbox />
+          </div>
+        </section>
+
         {/* SECTION TECH STACK (FULL-STACK PROOF) */}
         <section id="tech-stack" className="py-32 px-6 relative overflow-hidden border-y border-white/5 bg-elite-black/50">
           <div className="max-w-6xl mx-auto relative z-10">
@@ -520,6 +1032,17 @@ export default function Home() {
           </div>
         </section>
 
+        {/* FAQ SECTION */}
+        <section id="faq" className="py-32 px-6 border-t border-white/5 bg-elite-stone/10">
+          <div className="max-w-4xl mx-auto text-center">
+            <motion.div {...fadeIn} className="mb-20">
+              <h2 className="text-4xl md:text-8xl font-display font-bold mb-6">FAQ</h2>
+              <p className="text-stone-500 uppercase tracking-[0.5em] text-xs font-bold">Réponses à vos questions stratégiques</p>
+            </motion.div>
+            <FaqAccordion />
+          </div>
+        </section>
+
         {/* FINAL CALL TO ACTION */}
         <section id="audit" className="py-40 px-6 relative">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[1px] bg-gradient-to-r from-transparent via-elite-gold/30 to-transparent" />
@@ -529,14 +1052,12 @@ export default function Home() {
               <p className="text-stone-500 text-xl mb-16 font-light">Le coût de l'inaction est votre plus grande perte. <br />Récupérez votre dû maintenant.</p>
               
               <div className="flex flex-col sm:flex-row items-center justify-center gap-8">
-                <motion.a 
-                  href={mailTo}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-elite-gold text-black px-16 py-8 rounded-full font-bold uppercase tracking-[0.2em] text-sm gold-border-glow shadow-[0_20px_50px_rgba(202,138,4,0.3)]"
+                <MagneticButton 
+                  onClick={() => setIsModalOpen(true)}
+                  className="bg-elite-gold text-black px-16 py-8 rounded-full font-bold uppercase tracking-[0.2em] text-sm gold-border-glow shadow-[0_20px_50px_rgba(202,138,4,0.3)] cursor-pointer"
                 >
                   Réserver mon Audit
-                </motion.a>
+                </MagneticButton>
                 <motion.a 
                   href={whatsappUrl}
                   target="_blank"
@@ -566,6 +1087,101 @@ export default function Home() {
           L'excellence est une habitude, pas un acte.
         </div>
       </footer>
+
+      {/* MODAL AUDIT INTERACTIF (CRO SYSTEM) */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={() => setIsModalOpen(false)}
+            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+          />
+          
+          {/* Modal Container */}
+          <motion.div 
+            initial={{ scale: 0.9, y: 20, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            transition={{ type: "spring", damping: 25, stiffness: 150 }}
+            className="relative w-full max-w-lg bg-stone-900 border border-elite-gold/20 rounded-[2.5rem] p-8 md:p-12 shadow-2xl z-10 overflow-hidden"
+          >
+            {/* Background Glow */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-elite-gold/10 rounded-full blur-2xl pointer-events-none" />
+            
+            {/* Close Button */}
+            <button 
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-6 right-6 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-stone-400 hover:text-white transition-colors"
+            >
+              ✕
+            </button>
+
+            <h3 className="text-3xl font-display font-bold mb-2 text-center">Demande d'Audit</h3>
+            <p className="text-stone-400 text-xs font-light mb-8 uppercase tracking-widest text-center">
+              Analyse chirurgicale gratuite sous 48h
+            </p>
+
+            {isSubmitted ? (
+              <div className="py-12 text-center space-y-4">
+                <div className="w-16 h-16 bg-elite-gold/20 border border-elite-gold rounded-full flex items-center justify-center mx-auto text-elite-gold animate-bounce">
+                  <Zap size={28} />
+                </div>
+                <h4 className="text-xl font-bold text-white">Demande enregistrée !</h4>
+                <p className="text-stone-400 text-xs leading-relaxed max-w-xs mx-auto">
+                  Redirection automatique vers WhatsApp pour valider la prise de contact en direct...
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleFormSubmit} className="space-y-6 text-left">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase tracking-wider text-stone-400 font-bold block">Nom / Entreprise</label>
+                  <input 
+                    type="text" 
+                    name="name" 
+                    required 
+                    value={formData.name}
+                    onChange={handleFormChange}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-elite-gold transition-colors text-white"
+                    placeholder="Ex: Restaurant Le Cordon"
+                  />
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase tracking-wider text-stone-400 font-bold block">Votre Site Web / Instagram</label>
+                  <input 
+                    type="url" 
+                    name="site" 
+                    value={formData.site}
+                    onChange={handleFormChange}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-elite-gold transition-colors text-white"
+                    placeholder="Ex: https://monrestaurant.com"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase tracking-wider text-stone-400 font-bold block">Votre Friction ou Problématique</label>
+                  <textarea 
+                    name="message" 
+                    rows={3}
+                    value={formData.message}
+                    onChange={handleFormChange}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-elite-gold transition-colors text-white resize-none"
+                    placeholder="Ex: Le widget de réservation bug sur mobile, ou je n'ai pas de paiement direct."
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="w-full bg-elite-gold text-black rounded-full py-4 text-xs font-bold uppercase tracking-widest hover:bg-elite-gold-light transition-colors shadow-lg shadow-elite-gold/20 cursor-pointer"
+                >
+                  Analyser mes conversions
+                </button>
+              </form>
+            )}
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
