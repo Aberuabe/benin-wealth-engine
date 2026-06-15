@@ -2,6 +2,7 @@ import smtplib
 import ssl
 import time
 import random
+import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -49,7 +50,9 @@ def main():
     sender_email = input("Ton email Gmail : ")
     app_password = input("Ton mot de passe d'application (16 caractères) : ")
     
-    leads = charger_leads("machine-prospection/leads/suivi_leads.md")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    leads_path = os.path.join(script_dir, "..", "leads", "suivi_leads.md")
+    leads = charger_leads(leads_path)
     total = len(leads)
     
     print(f"📈 {total} leads détectés. Début de l'envoi...")

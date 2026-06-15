@@ -52,8 +52,8 @@ export default function Home() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
-  const mailTo = "mailto:aberuabe839@gmail.com?subject=Demande d'Audit Conversion - Vitrine d'Élite&body=Bonjour Abel, je souhaite doubler mes conversions...";
-  const whatsappUrl = "https://wa.me/22967750083?text=Bonjour%20Abel,%20je%20souhaite%20en%20savoir%20plus%20sur%20tes%20machines%20à%20cash.";
+  const mailTo = "mailto:dotonouabel@gmail.com?subject=Demande d'Audit Conversion - Vitrine d'Élite&body=Bonjour Abel, je souhaite doubler mes conversions...";
+  const whatsappUrl = "https://wa.me/2290167750083?text=Bonjour%20Abel,%20je%20souhaite%20en%20savoir%20plus%20sur%20tes%20machines%20à%20cash.";
 
   return (
     <div className="min-h-screen selection:bg-elite-gold selection:text-black relative bg-elite-black text-white overflow-x-hidden">
@@ -243,7 +243,7 @@ export default function Home() {
                 </div>
                 <div className="space-y-4">
                   {[
-                    { name: "Next.js 16", desc: "Performance & SEO natif" },
+                    { name: "Next.js 15+", desc: "Performance & SEO natif" },
                     { name: "React 19", desc: "Composants réactifs" },
                     { name: "Tailwind 4", desc: "Design atomique" },
                     { name: "Framer Motion", desc: "Transitions fluides" }
