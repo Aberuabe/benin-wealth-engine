@@ -285,7 +285,6 @@ function RoiSimulator({ onCtaClick }: RoiSimulatorProps) {
           <button
             onClick={handleAction}
             className="w-full bg-elite-gold hover:bg-elite-gold-light text-black py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-elite-gold/20 hover:scale-[1.02] active:scale-[0.98]"
-          >
             Récupérer ce manque à gagner
           </button>
         </div>
@@ -297,10 +296,29 @@ function RoiSimulator({ onCtaClick }: RoiSimulatorProps) {
 // --- INTERACTIVE PROTOTYPE SANDBOX COMPONENT ---
 function PrototypeSandbox() {
   const [formData, setFormData] = useState({ name: "", guests: 2, time: "20:00" });
-  const [stage, setStage] = useState<"form" | "sent" | "reception">("form");
+  const [requireDeposit, setRequireDeposit] = useState(true);
+  const [momoNumber, setMomoNumber] = useState("0167750083");
+  const [momoOperator, setMomoOperator] = useState<"mtn" | "moov">("mtn");
+  const [stage, setStage] = useState<"form" | "payment" | "paying" | "sent" | "reception">("form");
 
   const handleSimulateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (requireDeposit) {
+      setStage("payment");
+    } else {
+      triggerProcessing();
+    }
+  };
+
+  const handlePaymentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setStage("paying");
+    setTimeout(() => {
+      triggerProcessing();
+    }, 2500); // Simulate MOMO push approval delay
+  };
+
+  const triggerProcessing = () => {
     setStage("sent");
     setTimeout(() => {
       setStage("reception");
@@ -309,6 +327,8 @@ function PrototypeSandbox() {
 
   const resetSandbox = () => {
     setFormData({ name: "", guests: 2, time: "20:00" });
+    setRequireDeposit(true);
+    setMomoNumber("0167750083");
     setStage("form");
   };
 
@@ -321,7 +341,7 @@ function PrototypeSandbox() {
             <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full">
               Démonstration Interactive
             </span>
-            <h3 className="text-3xl font-display font-bold mt-4 mb-2">
+            <h3 className="text-3xl md:text-4xl font-display font-bold mt-4 mb-2">
               Testez le moteur de réservation
             </h3>
             <p className="text-stone-400 text-sm font-light leading-relaxed mb-6">
@@ -338,12 +358,17 @@ function PrototypeSandbox() {
             </div>
             <div className="w-[1px] h-3 bg-stone-700 ml-3" />
             <div className="flex items-center gap-3">
-              <div className="w-6 h-6 bg-blue-500/10 border border-blue-500/20 rounded-full flex items-center justify-center text-xs font-bold font-mono text-blue-400">2</div>
+              <div className="w-6 h-6 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center justify-center text-xs font-bold font-mono text-amber-400">2</div>
+              <p className="text-[11px] text-stone-300 font-light">Paiement d'acompte sécurisé en ligne par <strong className="text-amber-400">Mobile Money / Cartes</strong>.</p>
+            </div>
+            <div className="w-[1px] h-3 bg-stone-700 ml-3" />
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 bg-blue-500/10 border border-blue-500/20 rounded-full flex items-center justify-center text-xs font-bold font-mono text-blue-400">3</div>
               <p className="text-[11px] text-stone-300 font-light">Alerte immédiate envoyée à la réception via <strong className="text-blue-400">Telegram API</strong>.</p>
             </div>
             <div className="w-[1px] h-3 bg-stone-700 ml-3" />
             <div className="flex items-center gap-3">
-              <div className="w-6 h-6 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center text-xs font-bold font-mono text-emerald-400">3</div>
+              <div className="w-6 h-6 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center text-xs font-bold font-mono text-emerald-400">4</div>
               <p className="text-[11px] text-stone-300 font-light">Confirmation et ticket client envoyés par <strong className="text-emerald-400">WhatsApp API</strong>.</p>
             </div>
           </div>
@@ -414,6 +439,23 @@ function PrototypeSandbox() {
                       />
                     </div>
                   </div>
+
+                  {/* DEPOSIT TOGGLE */}
+                  <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl">
+                    <input
+                      type="checkbox"
+                      id="depositToggle"
+                      checked={requireDeposit}
+                      onChange={(e) => setRequireDeposit(e.target.checked)}
+                      className="w-4 h-4 rounded border-white/10 text-elite-gold focus:ring-elite-gold bg-stone-900 accent-elite-gold"
+                    />
+                    <label
+                      htmlFor="depositToggle"
+                      className="text-[10px] font-semibold text-stone-300 cursor-pointer"
+                    >
+                      Exiger un acompte de garantie (MTN / Moov)
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -426,11 +468,110 @@ function PrototypeSandbox() {
             </form>
           )}
 
+          {stage === "payment" && (
+            <form onSubmit={handlePaymentSubmit} className="space-y-4 flex-grow flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="text-center pb-2 border-b border-white/5">
+                  <span className="text-[10px] uppercase tracking-wider text-amber-500 font-bold block">
+                    Passerelle de Paiement (Simulé FedaPay)
+                  </span>
+                </div>
+
+                <div className="p-3 bg-white/5 border border-white/10 rounded-xl flex justify-between items-center text-xs">
+                  <div>
+                    <p className="text-[9px] text-stone-455 uppercase">Établissement</p>
+                    <p className="font-bold text-white">Hôtel Maison Rouge</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[9px] text-stone-455 uppercase">Acompte requis</p>
+                    <p className="font-bold text-elite-gold">5 000 FCFA</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                    Mode de Paiement
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setMomoOperator("mtn")}
+                      className={`py-2.5 rounded-xl text-[10px] font-bold uppercase border transition-all ${
+                        momoOperator === "mtn"
+                          ? "bg-amber-500/20 border-amber-500 text-amber-300"
+                          : "bg-white/5 border-white/10 text-stone-400"
+                      }`}
+                    >
+                      MTN MoMo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMomoOperator("moov")}
+                      className={`py-2.5 rounded-xl text-[10px] font-bold uppercase border transition-all ${
+                        momoOperator === "moov"
+                          ? "bg-blue-500/20 border-blue-500 text-blue-300"
+                          : "bg-white/5 border-white/10 text-stone-400"
+                      }`}
+                    >
+                      Moov Flooz
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                    Numéro de téléphone
+                  </label>
+                  <div className="flex gap-2">
+                    <span className="bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-xs text-stone-300 font-mono flex items-center">
+                      +229
+                    </span>
+                    <input
+                      type="tel"
+                      required
+                      pattern="[0-9]{8,10}"
+                      value={momoNumber}
+                      onChange={(e) => setMomoNumber(e.target.value)}
+                      className="flex-grow bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-elite-gold text-white font-mono"
+                      placeholder="Ex: 01 67 75 00 83"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-emerald-500/20 mt-6"
+              >
+                Payer 5 000 FCFA
+              </button>
+            </form>
+          )}
+
+          {stage === "paying" && (
+            <div className="flex-grow flex flex-col items-center justify-center text-center space-y-4">
+              <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center animate-pulse text-emerald-400">
+                <MessageCircle size={28} />
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-sm font-bold text-white">Demande de débit envoyée !</h4>
+                <p className="text-stone-400 text-[10px] leading-relaxed max-w-xs mx-auto">
+                  Un pop-up de validation a été envoyé sur le numéro{" "}
+                  <strong className="font-mono text-white">+229 {momoNumber}</strong>.
+                  <br />
+                  Saisissez votre code PIN sur votre mobile pour valider l'acompte de{" "}
+                  <strong className="text-elite-gold">5 000 FCFA</strong>.
+                </p>
+              </div>
+              <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mt-4" />
+            </div>
+          )}
+
           {stage === "sent" && (
             <div className="flex-grow flex flex-col items-center justify-center text-center space-y-4">
               <div className="w-12 h-12 border-2 border-elite-gold border-t-transparent rounded-full animate-spin" />
               <div>
-                <h4 className="text-sm font-bold text-white">Routage de l'automatisation...</h4>
+                <h4 className="text-sm font-bold text-white">Traitement de la réservation...</h4>
                 <p className="text-stone-500 text-[10px] mt-1">
                   Envoi des notifications simultanées à la réception et au client
                 </p>
@@ -458,10 +599,19 @@ function PrototypeSandbox() {
                   </div>
                   <div className="text-xs text-stone-200 leading-relaxed font-mono">
                     🚨 <strong>NOUVELLE DEMANDE :</strong>
-                    <div className="pl-3 mt-1 border-l border-blue-500/20 text-stone-300">
-                      • Client: {formData.name} <br />
-                      • Couverts: {formData.guests} <br />
-                      • Heure: {formData.time}
+                    <div className="pl-3 mt-1 border-l border-blue-500/20 text-stone-300 space-y-0.5">
+                      <div>• Client: {formData.name}</div>
+                      <div>• Couverts: {formData.guests}</div>
+                      <div>• Heure: {formData.time}</div>
+                      {requireDeposit ? (
+                        <div className="text-emerald-400 font-bold">
+                          • Paiement: Acompte 5 000 FCFA validé ({momoOperator.toUpperCase()} MoMo) 🟢
+                        </div>
+                      ) : (
+                        <div className="text-amber-500 font-bold">
+                          • Paiement: Sur place (Pas d'acompte) ⚠️
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -475,10 +625,18 @@ function PrototypeSandbox() {
                     <span>Maison Rouge Cotonou (Officiel)</span>
                     <span className="text-[7px] font-normal text-emerald-400">✓✓</span>
                   </div>
-                  <p className="text-[11px] text-white leading-relaxed">
-                    Bonjour {formData.name}, votre réservation pour {formData.guests} personnes ce soir à{" "}
-                    {formData.time} à l'Hôtel Maison Rouge est bien enregistrée. À tout à l'heure ! 🍷
-                  </p>
+                  {requireDeposit ? (
+                    <p className="text-[11px] text-white leading-relaxed">
+                      Bonjour {formData.name}, votre réservation pour {formData.guests} personnes ce soir à{" "}
+                      {formData.time} à l'Hôtel Maison Rouge est bien validée.<br />
+                      💵 <strong>Acompte reçu :</strong> 5 000 FCFA par Mobile Money. Solde à régler sur place. Merci !
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-white leading-relaxed">
+                      Bonjour {formData.name}, votre réservation pour {formData.guests} personnes ce soir à{" "}
+                      {formData.time} à l'Hôtel Maison Rouge est bien enregistrée. Règlement sur place. À tout à l'heure ! 🍷
+                    </p>
+                  )}
                   <div className="text-right text-[7px] text-emerald-400/80 font-mono">
                     10:30
                   </div>
