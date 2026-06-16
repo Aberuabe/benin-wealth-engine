@@ -158,11 +158,14 @@ function RoiSimulator({ onCtaClick }: RoiSimulatorProps) {
     onCtaClick(presetMsg);
   };
 
+  // Calculate percentage of current compared to optimized
+  const currentPct = Math.max(15, Math.round((currentRevenue / optimizedRevenue) * 100));
+
   return (
     <div className="liquid-glass p-8 md:p-12 rounded-[2.5rem] border-white/5 relative overflow-hidden max-w-4xl mx-auto text-left">
       <div className="absolute top-0 right-0 w-64 h-64 bg-elite-gold/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="grid md:grid-cols-2 gap-12 items-center">
-        <div className="space-y-8">
+      <div className="grid md:grid-cols-2 gap-12 items-stretch">
+        <div className="space-y-8 flex flex-col justify-between">
           <div>
             <span className="text-[10px] font-bold tracking-widest uppercase text-elite-gold bg-elite-gold/10 px-3 py-1 rounded-full">
               Simulateur de Conversion
@@ -171,7 +174,7 @@ function RoiSimulator({ onCtaClick }: RoiSimulatorProps) {
               Calculez votre manque à gagner
             </h3>
             <p className="text-stone-400 text-sm font-light leading-relaxed">
-              Ajustez les curseurs pour voir l'impact immédiat d'une refonte Next.js optimisée à un taux standard de 3.5% sur votre chiffre d'affaires.
+              Ajustez les curseurs ci-dessous pour voir l'impact immédiat d'une refonte Next.js (optimisée à un taux standard de 3.5%) sur vos revenus mensuels.
             </p>
           </div>
 
@@ -188,7 +191,7 @@ function RoiSimulator({ onCtaClick }: RoiSimulatorProps) {
                 step="500"
                 value={traffic}
                 onChange={(e) => setTraffic(Number(e.target.value))}
-                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-elite-gold"
+                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-elite-gold"
               />
             </div>
 
@@ -204,7 +207,7 @@ function RoiSimulator({ onCtaClick }: RoiSimulatorProps) {
                 step="0.1"
                 value={conversion}
                 onChange={(e) => setConversion(Number(e.target.value))}
-                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-elite-gold"
+                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-elite-gold"
               />
             </div>
 
@@ -220,39 +223,70 @@ function RoiSimulator({ onCtaClick }: RoiSimulatorProps) {
                 step="5000"
                 value={basket}
                 onChange={(e) => setBasket(Number(e.target.value))}
-                className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-elite-gold"
+                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-elite-gold"
               />
             </div>
           </div>
         </div>
 
-        <div className="bg-elite-black/40 border border-white/5 rounded-3xl p-8 space-y-6 flex flex-col justify-between h-full relative">
-          <div className="space-y-4">
-            <div className="flex justify-between items-center border-b border-white/5 pb-3">
-              <span className="text-xs text-stone-400">Revenus mensuels estimés :</span>
-              <span className="text-sm font-mono text-stone-300">{formatFCFA(currentRevenue)}</span>
+        <div className="bg-elite-black/60 border border-white/10 rounded-3xl p-8 space-y-8 flex flex-col justify-between h-full relative shadow-inner">
+          <div className="space-y-6">
+            <h4 className="text-sm font-bold uppercase tracking-wider text-stone-300 pb-2 border-b border-white/5">Visualisation des Pertes</h4>
+            
+            {/* COMPARATIVE BARS */}
+            <div className="space-y-4">
+              {/* CURRENT REVENUE BAR */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-[11px] font-bold text-stone-400">
+                  <span>Revenus Actuels ({conversion}%)</span>
+                  <span>{formatFCFA(currentRevenue)}</span>
+                </div>
+                <div className="w-full bg-white/5 rounded-full h-3 overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${currentPct}%` }}
+                    transition={{ type: "spring", stiffness: 100, damping: 15 }}
+                    className="bg-rose-500/50 h-full rounded-full border border-rose-500/30"
+                  />
+                </div>
+              </div>
+
+              {/* OPTIMIZED REVENUE BAR */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-[11px] font-bold text-green-400">
+                  <span>Revenus Optimisés (3.5%)</span>
+                  <span>{formatFCFA(optimizedRevenue)}</span>
+                </div>
+                <div className="w-full bg-white/5 rounded-full h-3 overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: "100%" }}
+                    transition={{ type: "spring", stiffness: 100, damping: 15 }}
+                    className="bg-emerald-500 h-full rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)] border border-emerald-400"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="flex justify-between items-center border-b border-white/5 pb-3">
-              <span className="text-xs text-stone-400">Revenus à 3.5% (Vitrine d'Élite) :</span>
-              <span className="text-sm font-mono text-green-400 font-semibold">
-                {formatFCFA(optimizedRevenue)}
+
+            {/* LOST GAIN BLOCK */}
+            <div className="pt-4 p-5 bg-rose-950/20 border border-rose-500/20 rounded-2xl space-y-1">
+              <span className="text-[10px] uppercase tracking-widest text-rose-400 font-bold block">
+                Manque à gagner (par mois) :
               </span>
-            </div>
-            <div className="pt-4 space-y-2">
-              <span className="text-[10px] uppercase tracking-wider text-rose-500 font-bold block">
-                Manque à gagner mensuel :
-              </span>
-              <div className="text-3xl md:text-4xl font-display font-bold text-rose-500 font-mono drop-shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+              <div className="text-3xl font-display font-bold text-rose-500 font-mono drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]">
                 - {formatFCFA(lostGain)}
               </div>
+              <p className="text-[9px] text-stone-400 italic font-light pt-1">
+                Soit un manque à gagner annuel estimé à {formatFCFA(lostGain * 12)}.
+              </p>
             </div>
           </div>
 
           <button
             onClick={handleAction}
-            className="w-full bg-elite-gold hover:bg-elite-gold-light text-black py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-elite-gold/15 mt-6"
+            className="w-full bg-elite-gold hover:bg-elite-gold-light text-black py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-elite-gold/20 hover:scale-[1.02] active:scale-[0.98]"
           >
-            Récupérer ce chiffre
+            Récupérer ce manque à gagner
           </button>
         </div>
       </div>
@@ -264,16 +298,10 @@ function RoiSimulator({ onCtaClick }: RoiSimulatorProps) {
 function PrototypeSandbox() {
   const [formData, setFormData] = useState({ name: "", guests: 2, time: "20:00" });
   const [stage, setStage] = useState<"form" | "sent" | "reception">("form");
-  const [notification, setNotification] = useState("");
 
   const handleSimulateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setStage("sent");
-    setNotification(
-      `Nouvelle réservation de ${formData.name} pour ${formData.guests} personnes à ${formData.time}.`
-    );
-
-    // Simulate progression to the reception dashboard
     setTimeout(() => {
       setStage("reception");
     }, 2000);
@@ -287,86 +315,111 @@ function PrototypeSandbox() {
   return (
     <div className="liquid-glass p-8 md:p-12 rounded-[2.5rem] border-white/5 relative overflow-hidden max-w-4xl mx-auto text-left">
       <div className="absolute top-0 left-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="grid md:grid-cols-2 gap-12 items-center">
-        <div>
-          <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full">
-            Démonstration Interactive
-          </span>
-          <h3 className="text-3xl md:text-4xl font-display font-bold mt-4 mb-2">
-            Testez le moteur de réservation
-          </h3>
-          <p className="text-stone-400 text-sm font-light leading-relaxed mb-6">
-            Voici une simulation en temps réel du flux automatisé conçu pour l'<strong>Hôtel Maison Rouge</strong>. Remplissez le formulaire de gauche pour voir l'automatisation s'exécuter instantanément à droite.
-          </p>
-          <div className="space-y-4 text-xs text-stone-400">
+      <div className="grid md:grid-cols-2 gap-12 items-stretch">
+        <div className="flex flex-col justify-between">
+          <div>
+            <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full">
+              Démonstration Interactive
+            </span>
+            <h3 className="text-3xl font-display font-bold mt-4 mb-2">
+              Testez le moteur de réservation
+            </h3>
+            <p className="text-stone-400 text-sm font-light leading-relaxed mb-6">
+              Voici une simulation en temps réel du flux conçu pour l'<strong>Hôtel Maison Rouge</strong>. Remplissez le formulaire mobile de droite pour voir l'automatisation s'exécuter instantanément.
+            </p>
+          </div>
+
+          {/* VISUAL FLOW DIAGRAM */}
+          <div className="space-y-4 bg-elite-black/20 p-6 rounded-2xl border border-white/5 my-6">
+            <span className="text-[9px] uppercase tracking-widest text-stone-400 font-bold block mb-2">Flux Technique Exécuté</span>
             <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>Vitesse Next.js instantanée (aucune latence au clic).</span>
+              <div className="w-6 h-6 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-xs font-bold font-mono text-stone-300">1</div>
+              <p className="text-[11px] text-stone-300 font-light">Client valide sa table en <strong className="text-white">Next.js</strong> (vitesse instantanée).</p>
             </div>
+            <div className="w-[1px] h-3 bg-stone-700 ml-3" />
             <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>Notification immédiate sur le canal interne de la réception.</span>
+              <div className="w-6 h-6 bg-blue-500/10 border border-blue-500/20 rounded-full flex items-center justify-center text-xs font-bold font-mono text-blue-400">2</div>
+              <p className="text-[11px] text-stone-300 font-light">Alerte immédiate envoyée à la réception via <strong className="text-blue-400">Telegram API</strong>.</p>
             </div>
+            <div className="w-[1px] h-3 bg-stone-700 ml-3" />
             <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>Confirmation WhatsApp pré-remplie envoyée au client.</span>
+              <div className="w-6 h-6 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center text-xs font-bold font-mono text-emerald-400">3</div>
+              <p className="text-[11px] text-stone-300 font-light">Confirmation et ticket client envoyés par <strong className="text-emerald-400">WhatsApp API</strong>.</p>
+            </div>
+          </div>
+
+          <div className="space-y-3 text-xs text-stone-400">
+            <div className="flex items-center gap-2">
+              <span className="text-emerald-500">✔</span>
+              <span>Aucune perte de temps pour vos serveurs.</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-emerald-500">✔</span>
+              <span>100% de marges gardées chez vous.</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-elite-black/40 border border-white/5 rounded-3xl p-6 relative min-h-[350px] flex flex-col justify-between overflow-hidden">
+        <div className="bg-[#0C0A09]/60 border border-white/10 rounded-3xl p-6 relative min-h-[380px] flex flex-col justify-between overflow-hidden shadow-2xl">
           {stage === "form" && (
-            <form onSubmit={handleSimulateSubmit} className="space-y-4">
-              <div className="text-center pb-2 border-b border-white/5">
-                <span className="text-[10px] uppercase tracking-wider text-stone-400 font-bold block">
-                  Interface Client (Réservation Table)
-                </span>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
-                  Nom Complet
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-elite-gold transition-colors text-white"
-                  placeholder="Ex: Christian L."
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
-                    Couverts
-                  </label>
-                  <select
-                    value={formData.guests}
-                    onChange={(e) => setFormData({ ...formData, guests: Number(e.target.value) })}
-                    className="w-full bg-stone-900 border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-elite-gold text-white"
-                  >
-                    {[1, 2, 3, 4, 5, 6].map((num) => (
-                      <option key={num} value={num}>
-                        {num} {num > 1 ? "personnes" : "personne"}
-                      </option>
-                    ))}
-                  </select>
+            <form onSubmit={handleSimulateSubmit} className="space-y-4 flex-grow flex flex-col justify-between">
+              <div>
+                <div className="text-center pb-3 border-b border-white/5 mb-4">
+                  <span className="text-[10px] uppercase tracking-wider text-stone-400 font-bold block">
+                    Interface Client (Maison Rouge)
+                  </span>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
-                    Heure
-                  </label>
-                  <input
-                    type="time"
-                    value={formData.time}
-                    onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-elite-gold text-white"
-                  />
+                
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                      Nom Complet
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-elite-gold transition-colors text-white"
+                      placeholder="Ex: Christian L."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                        Couverts
+                      </label>
+                      <select
+                        value={formData.guests}
+                        onChange={(e) => setFormData({ ...formData, guests: Number(e.target.value) })}
+                        className="w-full bg-stone-900 border border-white/10 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-elite-gold text-white"
+                      >
+                        {[1, 2, 3, 4, 5, 6].map((num) => (
+                          <option key={num} value={num}>
+                            {num} {num > 1 ? "personnes" : "personne"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                        Heure
+                      </label>
+                      <input
+                        type="time"
+                        value={formData.time}
+                        onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-elite-gold text-white"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
+
               <button
                 type="submit"
-                className="w-full bg-elite-gold text-black py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer mt-4"
+                className="w-full bg-elite-gold hover:bg-elite-gold-light text-black py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer mt-6 shadow-lg shadow-elite-gold/15"
               >
                 Réserver ma table
               </button>
@@ -377,9 +430,9 @@ function PrototypeSandbox() {
             <div className="flex-grow flex flex-col items-center justify-center text-center space-y-4">
               <div className="w-12 h-12 border-2 border-elite-gold border-t-transparent rounded-full animate-spin" />
               <div>
-                <h4 className="text-sm font-bold text-white">Traitement de l'automatisation...</h4>
+                <h4 className="text-sm font-bold text-white">Routage de l'automatisation...</h4>
                 <p className="text-stone-500 text-[10px] mt-1">
-                  Génération de la notification et routage instantané
+                  Envoi des notifications simultanées à la réception et au client
                 </p>
               </div>
             </div>
@@ -387,44 +440,54 @@ function PrototypeSandbox() {
 
           {stage === "reception" && (
             <div className="flex-grow flex flex-col justify-between space-y-6">
-              <div className="space-y-4">
-                <div className="text-center pb-2 border-b border-white/5">
-                  <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-bold block">
-                    Flux d'Automatisation Activé
+              <div className="space-y-4 flex-grow">
+                <div className="text-center pb-2 border-b border-white/5 mb-3">
+                  <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-bold block animate-pulse">
+                    🟢 DÉPLOIEMENT ACTIVÉ (TEMPS RÉEL)
                   </span>
                 </div>
 
-                {/* Simulated Telegram Notification */}
-                <div className="p-3 bg-blue-950/20 border border-blue-500/20 rounded-xl space-y-1 text-left animate-slide-in">
-                  <div className="flex justify-between items-center text-[8px] text-blue-400 font-bold">
-                    <span>💬 TELEGRAM RUPTURE INTERNE</span>
-                    <span>À l'instant</span>
+                {/* Simulated Telegram Notification (Reception Alert) */}
+                <div className="p-3.5 bg-slate-900 border border-blue-500/30 rounded-2xl space-y-2 text-left animate-slide-in shadow-lg">
+                  <div className="flex justify-between items-center text-[9px] font-bold text-blue-400">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500 flex items-center justify-center text-[7px] text-white font-mono">T</span>
+                      <span>TELEGRAM RÉCEPTION (MAISON ROUGE)</span>
+                    </div>
+                    <span className="font-mono text-stone-500">10:30</span>
                   </div>
-                  <p className="text-[11px] text-white font-mono">
-                    🚨 <strong>Nouvelle réservation !</strong>
-                    <br />
-                    Client : {formData.name}
-                    <br />
-                    Détail : {formData.guests} couverts à {formData.time}
-                  </p>
+                  <div className="text-xs text-stone-200 leading-relaxed font-mono">
+                    🚨 <strong>NOUVELLE DEMANDE :</strong>
+                    <div className="pl-3 mt-1 border-l border-blue-500/20 text-stone-300">
+                      • Client: {formData.name} <br />
+                      • Couverts: {formData.guests} <br />
+                      • Heure: {formData.time}
+                    </div>
+                  </div>
                 </div>
 
-                {/* Simulated WhatsApp SMS Client Confirmation */}
-                <div className="p-3 bg-emerald-950/20 border border-emerald-500/20 rounded-xl space-y-1 text-left animate-slide-in-delay">
-                  <div className="flex justify-between items-center text-[8px] text-emerald-400 font-bold">
-                    <span>💬 CONFIRMATION CLIENT (WhatsApp/SMS)</span>
-                    <span>À l'instant</span>
+                {/* Simulated WhatsApp Chat Bubble (Client Ticket) */}
+                <div className="p-4 bg-[#005c4b] border border-emerald-500/30 rounded-2xl space-y-1.5 text-left animate-slide-in-delay shadow-lg max-w-[85%] ml-auto relative">
+                  {/* Speech Bubble Tail */}
+                  <div className="absolute top-0 right-0 -mr-1.5 w-3 h-3 bg-[#005c4b] rotate-45 border-r border-t border-emerald-500/30" />
+                  
+                  <div className="flex justify-between items-center text-[8px] text-emerald-300 font-bold">
+                    <span>Maison Rouge Cotonou (Officiel)</span>
+                    <span className="text-[7px] font-normal text-emerald-400">✓✓</span>
                   </div>
-                  <p className="text-[11px] text-stone-300">
-                    "Bonjour {formData.name}, votre réservation pour {formData.guests} personnes ce soir à{" "}
-                    {formData.time} à l'Hôtel Maison Rouge est confirmée. À tout à l'heure !"
+                  <p className="text-[11px] text-white leading-relaxed">
+                    Bonjour {formData.name}, votre réservation pour {formData.guests} personnes ce soir à{" "}
+                    {formData.time} à l'Hôtel Maison Rouge est bien enregistrée. À tout à l'heure ! 🍷
                   </p>
+                  <div className="text-right text-[7px] text-emerald-400/80 font-mono">
+                    10:30
+                  </div>
                 </div>
               </div>
 
               <button
                 onClick={resetSandbox}
-                className="w-full border border-white/10 hover:border-white/20 text-stone-400 hover:text-white py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer"
+                className="w-full border border-white/10 hover:border-white/20 text-stone-400 hover:text-white py-3.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer hover:bg-white/[0.02]"
               >
                 Réessayer la simulation
               </button>
