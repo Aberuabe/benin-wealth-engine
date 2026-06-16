@@ -3,6 +3,7 @@ import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import sys
+sys.stdout.reconfigure(encoding='utf-8')
 
 # --- CONFIGURATION MAISON ROUGE ---
 TO_EMAIL = "contact@maison-rouge-cotonou.com"

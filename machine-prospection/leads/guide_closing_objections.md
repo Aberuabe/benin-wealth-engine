@@ -56,3 +56,22 @@
 >
 > 3. **Sécurité et Alertes :**
 > Les paiements (Mobile Money MTN/Moov via FedaPay/KKiaPay) et cartes bancaires sont sécurisés en externe selon les normes bancaires (PCI-DSS). Les alertes instantanées pour votre équipe de réception sont configurées via des passerelles automatiques (WhatsApp/Telegram), sans aucune modification requise sur vos infrastructures internes."
+
+---
+
+## 7. L'OBJECTION : "Quelles sont vos références ? Avec qui avez-vous déjà travaillé ?"
+**Ce que le client veut savoir :** Êtes-vous fiable ou vais-je perdre mon temps avec un débutant ?
+**Ta réponse (à copier/coller) :**
+> "Je suis ingénieur logiciel indépendant spécialisé dans les technologies de vente modernes (Next.js/Serverless). Plutôt que de vous montrer des logos d'autres entreprises, je préfère vous montrer des résultats concrets pour **votre** établissement :
+> 1. Ma meilleure référence est le prototype fonctionnel que je vous propose de concevoir gratuitement pour vous. Vous pourrez le tester sur vos propres téléphones avant de verser le moindre centime.
+> 2. Contrairement aux grandes agences qui gèrent 50 clients en même temps et vous livrent des sites WordPress lents et lourds, je me consacre exclusivement à la réussite technique de Maison Rouge. 
+> 3. Je prends 100% du risque à ma charge : pas d'acompte, et une garantie de remboursement complet sous 30 jours après mise en ligne si vous ne constatez pas de résultats."
+
+---
+
+## 8. L'OBJECTION : "Comment avez-vous trouvé cette lacune sur notre site ?"
+**Ce que le client veut savoir :** Est-ce que vous nous espionnez ou est-ce une démarche professionnelle ?
+**Ta réponse (à copier/coller) :**
+> "En tant que spécialiste des systèmes de vente en ligne à Cotonou, j'analyse régulièrement les performances des établissements de prestige locaux. 
+> J'ai effectué un audit technique de performance mobile (Lighthouse) sur votre site actuel. J'ai constaté que le temps de chargement sur les connexions mobiles locales (MTN/Moov) dépasse les 4 secondes et que le processus de réservation nécessite des validations manuelles par e-mail. 
+> En e-commerce, chaque seconde de chargement mobile supplémentaire fait perdre environ 7% de clients. C'est en voyant ce manque à gagner évident que j'ai décidé de créer cette démonstration pour vous montrer ce qu'il est possible d'accomplir."
