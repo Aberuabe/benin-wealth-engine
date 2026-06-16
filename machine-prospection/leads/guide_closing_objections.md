@@ -40,3 +40,19 @@
 **Ce que le client veut savoir :** Quel est l'intérêt d'un site propre ?
 **Ta réponse (à copier/coller) :**
 > "Vos réseaux sociaux sont une excellente vitrine, mais ils appartiennent à Meta. Si l'algorithme change ou si votre compte est temporairement bloqué, vous perdez tout contact avec vos clients. De plus, répondre manuellement aux messages Instagram prend des heures à vos équipes et génère des erreurs de réservation. Un système automatisé travaille pour vous 24h/24, même quand vous dormez, et convertit le trafic de vos réseaux sociaux en réservations réelles."
+
+---
+
+## 6. L'OBJECTION : "Comment allez-vous faire l'intégration sur notre site actuel ?"
+**Ce que le client veut savoir :** Est-ce que cela va casser mon site actuel, provoquer une panne, ou demander des semaines de développement ?
+**Ta réponse (à copier/coller) :**
+> "Nous avons deux approches possibles, toutes deux conçues pour éliminer tout risque d'indisponibilité de votre site actuel :
+>
+> 1. **L'intégration par sous-domaine (Recommandée & 100% sécurisée) :**
+> Nous hébergeons le moteur de réservation ultra-rapide sur un sous-domaine dédié (par exemple : `reservation.maison-rouge-cotonou.com`). Votre site actuel reste inchangé à 100%. Il suffit simplement d'ajouter un bouton 'Réserver en ligne' sur votre menu principal qui redirige vers ce sous-domaine. C'est l'approche standard des plus grands groupes hôteliers : elle garantit **0 risque technique** et **0 interruption de service** pour votre site existant. La configuration prend moins de 15 minutes.
+>
+> 2. **L'intégration par Widget direct (Script léger) :**
+> Si vous préférez que le moteur de réservation s'affiche directement à l'intérieur d'une de vos pages WordPress actuelles, je vous fournis un code d'intégration ultra-léger (une ligne de code) que votre webmaster ou moi-même pouvons insérer en 5 minutes.
+>
+> 3. **Sécurité et Alertes :**
+> Les paiements (Mobile Money MTN/Moov via FedaPay/KKiaPay) et cartes bancaires sont sécurisés en externe selon les normes bancaires (PCI-DSS). Les alertes instantanées pour votre équipe de réception sont configurées via des passerelles automatiques (WhatsApp/Telegram), sans aucune modification requise sur vos infrastructures internes."

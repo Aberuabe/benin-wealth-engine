@@ -440,21 +440,41 @@ function PrototypeSandbox() {
                     </div>
                   </div>
 
-                  {/* DEPOSIT TOGGLE */}
-                  <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl">
-                    <input
-                      type="checkbox"
-                      id="depositToggle"
-                      checked={requireDeposit}
-                      onChange={(e) => setRequireDeposit(e.target.checked)}
-                      className="w-4 h-4 rounded border-white/10 text-elite-gold focus:ring-elite-gold bg-stone-900 accent-elite-gold"
-                    />
-                    <label
-                      htmlFor="depositToggle"
-                      className="text-[10px] font-semibold text-stone-300 cursor-pointer"
-                    >
-                      Exiger un acompte de garantie (MTN / Moov)
+                  {/* DEPOSIT MODE SELECTOR */}
+                  <div className="space-y-2">
+                    <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                      Option de Réservation
                     </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setRequireDeposit(false)}
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                          !requireDeposit
+                            ? "border-white/20 bg-white/5"
+                            : "border-white/5 bg-transparent opacity-60 hover:opacity-100"
+                        }`}
+                      >
+                        <span className="text-[10px] font-bold block text-white">Réservation simple</span>
+                        <span className="text-[8px] text-stone-400 block mt-0.5">Sans acompte en ligne</span>
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={() => setRequireDeposit(true)}
+                        className={`p-3 rounded-xl border text-left transition-all relative overflow-hidden cursor-pointer ${
+                          requireDeposit
+                            ? "border-elite-gold bg-elite-gold/5 shadow-[0_0_15px_rgba(202,138,4,0.1)]"
+                            : "border-white/5 bg-transparent opacity-60 hover:opacity-100"
+                        }`}
+                      >
+                        <div className="absolute top-0 right-0 bg-elite-gold text-[7px] text-black font-extrabold px-1.5 py-0.5 rounded-bl-lg uppercase tracking-wider">
+                          Recommandé
+                        </div>
+                        <span className="text-[10px] font-bold block text-elite-gold">Avec Acompte</span>
+                        <span className="text-[8px] text-stone-300 block mt-0.5">Mobile Money (5 000 FCFA)</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
