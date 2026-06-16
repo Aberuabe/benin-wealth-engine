@@ -611,11 +611,13 @@ export default function Home() {
             <span className="font-display font-semibold tracking-widest text-sm uppercase hidden sm:block">Vitrine d'Élite</span>
           </div>
           
-          <div className="flex items-center gap-6 sm:gap-10">
-            <a href="#tech-stack" className="text-[10px] uppercase tracking-[0.2em] font-medium hover:text-elite-gold transition-colors">Tech Stack</a>
+          <div className="flex items-center gap-4 sm:gap-6">
+            <a href="#calculateur" className="text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] font-medium hover:text-elite-gold transition-colors">Calculateur</a>
+            <a href="#demo" className="text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] font-medium hover:text-elite-gold transition-colors">Démo</a>
+            <a href="#faq" className="text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] font-medium hover:text-elite-gold transition-colors">FAQ</a>
             <MagneticButton 
               onClick={() => setIsModalOpen(true)} 
-              className="bg-elite-gold text-black text-[10px] uppercase tracking-[0.2em] font-bold px-5 py-2 rounded-full transition-all cursor-pointer shadow-md shadow-elite-gold/10"
+              className="bg-elite-gold text-black text-[9px] sm:text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] font-bold px-4 py-2 sm:px-5 sm:py-2.5 rounded-full transition-all cursor-pointer shadow-md shadow-elite-gold/10"
             >
               Audit Flash
             </MagneticButton>
@@ -882,17 +884,18 @@ export default function Home() {
         </section>
 
         {/* PROTOTYPE SANDBOX SECTION */}
-        <section className="py-16 px-6 relative overflow-hidden bg-elite-stone/20">
+        <section id="demo" className="py-16 px-6 relative overflow-hidden bg-elite-stone/20">
           <div className="max-w-6xl mx-auto text-center">
             <PrototypeSandbox />
           </div>
         </section>
 
-        {/* SECTION TECH STACK (FULL-STACK PROOF) */}
+        {/* SECTION TECH STACK (BUSINESS-VALUE FOCUS) */}
         <section id="tech-stack" className="py-32 px-6 relative overflow-hidden border-y border-white/5 bg-elite-black/50">
           <div className="max-w-6xl mx-auto relative z-10">
             <motion.div {...fadeIn} className="text-center mb-20">
-              <h2 className="text-4xl md:text-7xl font-display font-bold leading-tight tracking-tight">Arsenal Technique.</h2>
+              <h2 className="text-4xl md:text-7xl font-display font-bold leading-tight tracking-tight">Performance & Intégrations.</h2>
+              <p className="text-stone-500 uppercase tracking-[0.5em] text-xs font-bold mt-4">Des solutions sur-mesure au service de votre rentabilité</p>
             </motion.div>
 
             <div className="grid md:grid-cols-3 gap-8 text-left">
@@ -902,14 +905,14 @@ export default function Home() {
                   <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-400">
                     <Layers size={20} />
                   </div>
-                  <h4 className="text-sm font-bold uppercase tracking-widest">Interface Élite</h4>
+                  <h4 className="text-sm font-bold uppercase tracking-widest text-white">Interface Mobile Premium</h4>
                 </div>
                 <div className="space-y-4">
                   {[
-                    { name: "Next.js 15+", desc: "Performance & SEO natif" },
-                    { name: "React 19", desc: "Composants réactifs" },
-                    { name: "Tailwind 4", desc: "Design atomique" },
-                    { name: "Framer Motion", desc: "Transitions fluides" }
+                    { name: "Vitesse Next.js", desc: "Chargement en < 0.8s" },
+                    { name: "Fluidité tactile mobile", desc: "Optimisé pour smartphones" },
+                    { name: "Code haut de gamme", desc: "Sécurité totale anti-piratage" },
+                    { name: "Esthétique épurée", desc: "Image de marque valorisée" }
                   ].map((tech, i) => (
                     <div key={i} className="flex justify-between items-center border-b border-white/5 pb-2">
                       <span className="text-xs font-medium text-stone-200">{tech.name}</span>
@@ -919,20 +922,20 @@ export default function Home() {
                 </div>
               </motion.div>
 
-              {/* BACKEND PILLAR */}
+              {/* TRANSACTIONS PILLAR */}
               <motion.div {...fadeIn} transition={{ delay: 0.2 }} className="liquid-glass p-8 rounded-[2.5rem] border-white/5">
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-10 h-10 bg-elite-gold/10 rounded-full flex items-center justify-center text-elite-gold">
                     <Database size={20} />
                   </div>
-                  <h4 className="text-sm font-bold uppercase tracking-widest">Moteur Robuste</h4>
+                  <h4 className="text-sm font-bold uppercase tracking-widest text-white">Paiements & Flux</h4>
                 </div>
                 <div className="space-y-4">
                   {[
-                    { name: "PostgreSQL", desc: "Données structurées" },
-                    { name: "Drizzle ORM", desc: "Type-safety absolue" },
-                    { name: "Redis", desc: "Cache ultra-rapide" },
-                    { name: "Docker", desc: "Déploiement scalable" }
+                    { name: "Intégrations locales", desc: "Paiements MTN MoMo & Moov Flooz" },
+                    { name: "Sécurisation bancaire", desc: "Cartes VISA / Mastercard" },
+                    { name: "Marges préservées", desc: "Zéro commission intermédiaire" },
+                    { name: "Fichier client", desc: "Vous possédez vos données" }
                   ].map((tech, i) => (
                     <div key={i} className="flex justify-between items-center border-b border-white/5 pb-2">
                       <span className="text-xs font-medium text-stone-200">{tech.name}</span>
@@ -942,20 +945,20 @@ export default function Home() {
                 </div>
               </motion.div>
 
-              {/* AI & AUTOMATION PILLAR */}
+              {/* AUTOMATION PILLAR */}
               <motion.div {...fadeIn} transition={{ delay: 0.3 }} className="liquid-glass p-8 rounded-[2.5rem] border-white/5">
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center text-green-400">
                     <Cpu size={20} />
                   </div>
-                  <h4 className="text-sm font-bold uppercase tracking-widest">Intelligence</h4>
+                  <h4 className="text-sm font-bold uppercase tracking-widest text-white">Automatisations</h4>
                 </div>
                 <div className="space-y-4">
                   {[
-                    { name: "OpenAI / Claude", desc: "Agents personnalisés" },
-                    { name: "Automation IA", desc: "Prospection & Lead" },
-                    { name: "Vector DB", desc: "Mémoire sémantique" },
-                    { name: "API Native", desc: "Flux de données" }
+                    { name: "Alertes instantanées", desc: "Notifications WhatsApp / SMS" },
+                    { name: "Suivi équipe", desc: "Canal Telegram de réception" },
+                    { name: "Centralisation", desc: "Tableaux de bord partagés" },
+                    { name: "Maintenance incluse", desc: "Zéro frais d'hébergement" }
                   ].map((tech, i) => (
                     <div key={i} className="flex justify-between items-center border-b border-white/5 pb-2">
                       <span className="text-xs font-medium text-stone-200">{tech.name}</span>
