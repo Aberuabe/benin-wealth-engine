@@ -75,3 +75,22 @@
 > "En tant que spécialiste des systèmes de vente en ligne à Cotonou, j'analyse régulièrement les performances des établissements de prestige locaux. 
 > J'ai effectué un audit technique de performance mobile (Lighthouse) sur votre site actuel. J'ai constaté que le temps de chargement sur les connexions mobiles locales (MTN/Moov) dépasse les 4 secondes et que le processus de réservation nécessite des validations manuelles par e-mail. 
 > En e-commerce, chaque seconde de chargement mobile supplémentaire fait perdre environ 7% de clients. C'est en voyant ce manque à gagner évident que j'ai décidé de créer cette démonstration pour vous montrer ce qu'il est possible d'accomplir."
+
+---
+
+## 9. L'OBJECTION : "C'est trop cher, pouvez-vous baisser votre prix ?"
+**Ce que le client veut savoir :** Pouvez-vous faire un rabais ou êtes-vous inflexible ?
+**Ta réponse (à copier/coller) :**
+> "250 000 FCFA est un tarif extrêmement bas pour un développement sur-mesure en Next.js (les prix du marché pour les entreprises hôtelières se situent plutôt autour de 1 000 000 FCFA). Ce montant représente la commission que vous versez à Booking.com pour seulement 2 ou 3 nuitées. L'outil est amorti dès le premier mois.
+> Cependant, pour faciliter notre collaboration, je peux vous proposer deux options :
+> 1. **Paiement échelonné :** Vous versez 125 000 FCFA à la livraison du prototype, et 125 000 FCFA 30 jours après la mise en ligne.
+> 2. **Réduction de périmètre :** Je peux baisser le tarif à 200 000 FCFA, mais nous devrons retirer l'intégration des SMS automatisés pour ne garder que les alertes WhatsApp et Telegram, car la configuration des serveurs SMS nécessite des étapes techniques supplémentaires."
+
+---
+
+## 10. LE CAS DU REMBOURSEMENT : "Que se passe-t-il si en 30 jours il n'y a pas d'amélioration ?"
+**Ce que tu dois faire et dire pour te protéger :**
+1. **Définir des critères précis :** Ne propose pas une garantie sur une "impression", mais sur des chiffres réels. Écris dans ton contrat : *« La garantie de remboursement s'applique si, après 30 jours de mise en ligne continue avec le bouton visible sur votre site principal, le système n'a pas enregistré au moins 10 réservations automatiques. »*
+2. **La clause de frais d'installation (Non remboursable) :** Divise ta prestation. Explique que 150 000 FCFA correspondent aux frais de développement et d'intégration technique (heures de travail incompressibles, non remboursables), et que les 100 000 FCFA restants constituent les frais de succès soumis à la garantie de 30 jours.
+3. **Ta réponse (à copier/coller) :**
+> "La garantie de résultats est écrite noir sur blanc dans notre contrat de service. Si le système ne comptabilise pas de réservations directes après 30 jours d'utilisation active avec le bouton bien visible sur votre site, je m'engage à vous rembourser la part variable de la prestation. C'est mon engagement de partenariat."
