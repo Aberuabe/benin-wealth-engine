@@ -285,6 +285,7 @@ function RoiSimulator({ onCtaClick }: RoiSimulatorProps) {
           <button
             onClick={handleAction}
             className="w-full bg-elite-gold hover:bg-elite-gold-light text-black py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-elite-gold/20 hover:scale-[1.02] active:scale-[0.98]"
+          >
             Récupérer ce manque à gagner
           </button>
         </div>
