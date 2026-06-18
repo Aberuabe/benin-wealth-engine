@@ -20,12 +20,10 @@ NOM_EXPEDITEUR = "Abel DOTONOU"
 def envoyer_reponse(sender_email, app_password):
     subject = "Re: Proposition de Collaboration Technique : Optimisation de votre Tunnel de Réservation Directe"
     
-    body = f"""Bonjour,
+    body = f"""Bonjour Céline,
 
-C'est un plaisir. Je serai ravi de vous rencontrer dans les locaux de la Maison Rouge afin d'échanger sur ces pistes d'optimisation et d'étudier comment nous pouvons fluidifier votre processus de réservation.
-
-Je valide avec plaisir votre invitation. Je vous propose de nous rencontrer le :
-👉 Vendredi 19 juin à 10h30
+C'est parfait pour moi. Je valide avec plaisir notre rencontre le :
+👉 Lundi 22 juin à 10h30 dans vos locaux.
 
 Afin de rendre notre échange le plus concret possible, je viendrai avec une démonstration visuelle simplifiée de l'interface sur smartphone pour que vous puissiez tester la réactivité du système en conditions réelles.
 
