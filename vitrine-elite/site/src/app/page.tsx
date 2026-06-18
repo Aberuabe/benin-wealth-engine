@@ -340,6 +340,7 @@ function PrototypeSandbox() {
   const [preRegisterStage, setPreRegisterStage] = useState<"none" | "start" | "camera" | "scanning" | "done">("none");
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
+  const [showPayload, setShowPayload] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // Manage webcam stream lifecycle
@@ -511,6 +512,7 @@ function PrototypeSandbox() {
     setStage("form");
     setSuccessView("client");
     setPreRegisterStage("none");
+    setShowPayload(false);
   };
 
   return (
@@ -1479,6 +1481,43 @@ function PrototypeSandbox() {
                           ))
                         )}
                       </div>
+                    </div>
+
+                    {/* WEBHOOK PAYLOAD INSPECTOR */}
+                    <div className="bg-stone-950 border border-white/5 p-3 rounded-xl space-y-2">
+                      <div className="flex justify-between items-center text-[8px] font-bold text-stone-400">
+                        <span className="flex items-center gap-1">
+                          <Code2 size={10} />
+                          PAYLOAD WEBHOOK (FedaPay JSON)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowPayload(!showPayload)}
+                          className="text-elite-gold hover:text-white px-2 py-0.5 rounded border border-elite-gold/25 hover:border-white/25 text-[7px] font-bold uppercase transition-colors cursor-pointer"
+                        >
+                          {showPayload ? "Masquer" : "Inspecter"}
+                        </button>
+                      </div>
+
+                      {showPayload && (
+                        <div className="font-mono text-[7px] text-stone-300 bg-black p-2 rounded border border-white/5 overflow-x-auto max-h-[120px] leading-relaxed animate-fade-in">
+                          <pre>{JSON.stringify({
+                            event: "transaction.approved",
+                            entity: "transaction",
+                            id: `tx_${Math.random().toString(36).substr(2, 9)}`,
+                            amount: depositRequired,
+                            currency: "XOF",
+                            status: "approved",
+                            mode: "live",
+                            callback_url: "https://maisonrouge-pms.bj/api/webhooks/fedapay",
+                            customer: {
+                              firstname: formData.name ? formData.name.split(" ")[0] : "Client",
+                              lastname: formData.name ? formData.name.split(" ").slice(1).join(" ") || "VIP" : "VIP",
+                              phone: `+229${momoNumber}`
+                            }
+                          }, null, 2)}</pre>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
