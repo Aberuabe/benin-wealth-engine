@@ -337,7 +337,73 @@ function PrototypeSandbox() {
   const [momoOperator, setMomoOperator] = useState<"mtn" | "moov">("mtn");
   const [stage, setStage] = useState<"form" | "payment" | "paying" | "sent" | "reception">("form");
   const [successView, setSuccessView] = useState<"client" | "pms">("client");
-  const [preRegisterStage, setPreRegisterStage] = useState<"none" | "start" | "scanning" | "done">("none");
+  const [preRegisterStage, setPreRegisterStage] = useState<"none" | "start" | "camera" | "scanning" | "done">("none");
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const [logs, setLogs] = useState<string[]>([]);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Manage webcam stream lifecycle
+  useEffect(() => {
+    let activeStream: MediaStream | null = null;
+    if (preRegisterStage === "camera") {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        .then((stream) => {
+          activeStream = stream;
+          setCameraStream(stream);
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+        })
+        .catch((err) => {
+          console.error("Camera access failed, falling back to simulated scanning:", err);
+          setPreRegisterStage("scanning");
+        });
+    }
+
+    return () => {
+      if (activeStream) {
+        activeStream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [preRegisterStage]);
+
+  // Handle reception and FedaPay webhooks / log system
+  useEffect(() => {
+    if (stage === "reception") {
+      const initialLogs = [
+        `SYSTEM: Nouvelle réservation reçue pour ${formData.name || "Client VIP"}`,
+        `GATEWAY: Paiement acompte de ${formatFCFA(depositRequired)} via ${momoOperator.toUpperCase()} MoMo validé`,
+        `WEBHOOK: FedaPay transaction TX-${Math.floor(Math.random() * 90000 + 10000)} approuvée`,
+        `NOTIFY: Message WhatsApp de confirmation délivré à ${formData.name || "Client VIP"} (+229 ${momoNumber})`,
+        `PMS: Allocation de la chambre pour Suite 201 effectuée`
+      ];
+      setLogs([]);
+      initialLogs.forEach((l, idx) => {
+        setTimeout(() => {
+          const time = new Date().toLocaleTimeString('fr-FR', { hour12: false });
+          setLogs(prev => [...prev, `[${time}] ${l}`]);
+        }, idx * 400);
+      });
+    }
+  }, [stage]);
+
+  // Handle client pre-registration logs
+  useEffect(() => {
+    if (preRegisterStage === "done") {
+      const checkinLogs = [
+        `CLIENT: Accès au portail check-in express via lien WhatsApp`,
+        `OCR: Capture et lecture du document d'identité effectuée`,
+        `IA: Extraction réussie. Nom: ${formData.name || "Client VIP"}, nationalité validée`,
+        `PMS: Pré-enregistrement complété. Statut Chambre 201: PRÊTE (Clé numérique générée)`
+      ];
+      checkinLogs.forEach((l, idx) => {
+        setTimeout(() => {
+          const time = new Date().toLocaleTimeString('fr-FR', { hour12: false });
+          setLogs(prev => [...prev, `[${time}] ${l}`]);
+        }, idx * 400);
+      });
+    }
+  }, [preRegisterStage]);
 
   // Format helper
   const formatFCFA = (val: number) => {
@@ -1215,16 +1281,62 @@ function PrototypeSandbox() {
                               <button
                                 type="button"
                                 onClick={() => {
+                                  setPreRegisterStage("camera");
+                                }}
+                                className="w-full py-4 border border-dashed border-white/25 rounded-xl hover:border-elite-gold flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-white/[0.01] transition-colors"
+                              >
+                                <span className="text-lg">📷</span>
+                                <span className="text-[10px] text-stone-300 font-bold">Lancer mon Appareil Photo</span>
+                                <span className="text-[8px] text-stone-500">Scan OCR intelligent en direct</span>
+                              </button>
+                            </div>
+                          )}
+
+                          {preRegisterStage === "camera" && (
+                            <div className="space-y-3 relative overflow-hidden rounded-xl border border-white/10 bg-black aspect-video flex items-center justify-center">
+                              <style>{`
+                                @keyframes laser-scan {
+                                  0% { top: 0%; }
+                                  50% { top: 100%; }
+                                  100% { top: 0%; }
+                                }
+                              `}</style>
+                              <video
+                                ref={videoRef}
+                                autoPlay
+                                playsInline
+                                muted
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
+                              
+                              {/* Laser line overlay */}
+                              <div 
+                                className="absolute left-0 right-0 h-0.5 bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.8)] z-20"
+                                style={{ animation: "laser-scan 2.5s infinite ease-in-out" }}
+                              />
+                              
+                              <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 rounded text-[7px] text-emerald-400 font-mono tracking-wider z-20 animate-pulse">
+                                CAMÉRA EN DIRECT
+                              </div>
+
+                              <div className="absolute inset-4 border border-white/20 pointer-events-none rounded z-10">
+                                <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-elite-gold" />
+                                <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-elite-gold" />
+                                <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-elite-gold" />
+                                <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-elite-gold" />
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => {
                                   setPreRegisterStage("scanning");
                                   setTimeout(() => {
                                     setPreRegisterStage("done");
                                   }, 2000);
                                 }}
-                                className="w-full py-4 border border-dashed border-white/25 rounded-xl hover:border-elite-gold flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-white/[0.01] transition-colors"
+                                className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-elite-gold hover:bg-elite-gold-light text-black font-bold text-[9px] uppercase tracking-wider py-1.5 px-4 rounded-full shadow-lg z-30 cursor-pointer"
                               >
-                                <span className="text-lg">📷</span>
-                                <span className="text-[10px] text-stone-300 font-bold">Scanner mon Passeport</span>
-                                <span className="text-[8px] text-stone-500">Formats supportés: JPEG, PNG, PDF</span>
+                                Capturer & Analyser
                               </button>
                             </div>
                           )}
@@ -1232,7 +1344,7 @@ function PrototypeSandbox() {
                           {preRegisterStage === "scanning" && (
                             <div className="flex flex-col items-center justify-center py-6 space-y-3">
                               <div className="w-8 h-8 border-2 border-elite-gold border-t-transparent rounded-full animate-spin" />
-                              <p className="text-[9px] text-stone-400 font-mono">Lecture optique de la puce RFID...</p>
+                              <p className="text-[9px] text-stone-400 font-mono">Lecture optique et OCR en cours...</p>
                             </div>
                           )}
 
@@ -1342,6 +1454,31 @@ function PrototypeSandbox() {
                           </li>
                         )}
                       </ul>
+                    </div>
+
+                    {/* SYSTEM AUTOMATION REAL-TIME JOURNAL */}
+                    <div className="bg-stone-950 border border-white/5 p-3 rounded-xl space-y-2">
+                      <div className="text-[8px] font-bold text-stone-400 pb-1.5 border-b border-white/5 flex justify-between items-center">
+                        <span className="flex items-center gap-1">
+                          <Cpu size={10} />
+                          JOURNAL D'AUTOMATISATION (LIVE LOGS)
+                        </span>
+                        <span className="text-emerald-400 flex items-center gap-1 text-[7px] font-mono">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                          ACTIF
+                        </span>
+                      </div>
+                      <div className="font-mono text-[8px] text-stone-300 space-y-1.5 max-h-[100px] overflow-y-auto pr-1">
+                        {logs.length === 0 ? (
+                          <div className="text-stone-500 italic">En attente d'événements...</div>
+                        ) : (
+                          logs.map((log, idx) => (
+                            <div key={idx} className="leading-normal border-l border-emerald-500/30 pl-1.5 py-0.5 animate-fade-in">
+                              {log}
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
