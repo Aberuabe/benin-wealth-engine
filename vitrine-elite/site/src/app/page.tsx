@@ -16,7 +16,13 @@ import {
   Layers,
   Cpu,
   Globe,
-  ExternalLink
+  ExternalLink,
+  Bed,
+  Utensils,
+  Calendar,
+  Users,
+  Clock,
+  CreditCard
 } from "lucide-react";
 
 // ANIMATION CONSTANTS
@@ -296,15 +302,72 @@ function RoiSimulator({ onCtaClick }: RoiSimulatorProps) {
 
 // --- INTERACTIVE PROTOTYPE SANDBOX COMPONENT ---
 function PrototypeSandbox() {
-  const [formData, setFormData] = useState({ name: "", guests: 2, time: "20:00" });
+  const [bookingType, setBookingType] = useState<"room" | "table">("room");
+  const [formData, setFormData] = useState({
+    name: "",
+    // Room fields
+    roomType: "suite",
+    checkIn: new Date().toISOString().split("T")[0],
+    checkOut: new Date(Date.now() + 86400000).toISOString().split("T")[0],
+    roomGuests: 2,
+    // Table fields
+    guests: 2,
+    time: "20:00",
+    tableLocation: "terrasse",
+    tableDate: new Date().toISOString().split("T")[0]
+  });
   const [requireDeposit, setRequireDeposit] = useState(true);
   const [momoNumber, setMomoNumber] = useState("0167750083");
   const [momoOperator, setMomoOperator] = useState<"mtn" | "moov">("mtn");
   const [stage, setStage] = useState<"form" | "payment" | "paying" | "sent" | "reception">("form");
 
+  // Helper formatting function
+  const formatFCFA = (val: number) => {
+    return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " FCFA";
+  };
+
+  const getStayNights = () => {
+    const start = new Date(formData.checkIn);
+    const end = new Date(formData.checkOut);
+    const diffTime = end.getTime() - start.getTime();
+    if (isNaN(diffTime) || diffTime <= 0) return 1;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+  };
+
+  const getRoomPricePerNight = () => {
+    if (formData.roomType === "executive") return 25000;
+    if (formData.roomType === "suite") return 45000;
+    return 75000;
+  };
+
+  const getRoomDepositPerNight = () => {
+    if (formData.roomType === "executive") return 10000;
+    if (formData.roomType === "suite") return 15000;
+    return 25000;
+  };
+
+  const roomNights = getStayNights();
+  const roomPricePerNight = getRoomPricePerNight();
+  const roomTotal = roomPricePerNight * roomNights;
+  const roomDeposit = getRoomDepositPerNight() * roomNights;
+
+  const getTableDeposit = () => {
+    if (formData.tableLocation === "vip") return 10000;
+    return requireDeposit ? 5000 : 0;
+  };
+
+  const tableDeposit = getTableDeposit();
+
+  const getDepositRequired = () => {
+    return bookingType === "room" ? roomDeposit : tableDeposit;
+  };
+
+  const depositRequired = getDepositRequired();
+
   const handleSimulateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (requireDeposit) {
+    const needsPay = bookingType === "room" || depositRequired > 0;
+    if (needsPay) {
       setStage("payment");
     } else {
       triggerProcessing();
@@ -327,7 +390,17 @@ function PrototypeSandbox() {
   };
 
   const resetSandbox = () => {
-    setFormData({ name: "", guests: 2, time: "20:00" });
+    setFormData({
+      name: "",
+      roomType: "suite",
+      checkIn: new Date().toISOString().split("T")[0],
+      checkOut: new Date(Date.now() + 86400000).toISOString().split("T")[0],
+      roomGuests: 2,
+      guests: 2,
+      time: "20:00",
+      tableLocation: "terrasse",
+      tableDate: new Date().toISOString().split("T")[0]
+    });
     setRequireDeposit(true);
     setMomoNumber("0167750083");
     setStage("form");
@@ -340,13 +413,13 @@ function PrototypeSandbox() {
         <div className="flex flex-col justify-between">
           <div>
             <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full">
-              Démonstration Interactive
+              Démonstration Interactive Pro
             </span>
             <h3 className="text-3xl md:text-4xl font-display font-bold mt-4 mb-2">
-              Testez le moteur de réservation
+              Moteur de Réservation Elite
             </h3>
             <p className="text-stone-400 text-sm font-light leading-relaxed mb-6">
-              Voici une simulation en temps réel du flux conçu pour l'<strong>Hôtel Maison Rouge</strong>. Remplissez le formulaire mobile de droite pour voir l'automatisation s'exécuter instantanément.
+              Simulation complète du flux client et hôtelier pour l'<strong>Hôtel Maison Rouge</strong>. Basculez entre la réservation de Chambres/Suites et celle du Restaurant haut de gamme.
             </p>
           </div>
 
@@ -355,48 +428,79 @@ function PrototypeSandbox() {
             <span className="text-[9px] uppercase tracking-widest text-stone-400 font-bold block mb-2">Flux Technique Exécuté</span>
             <div className="flex items-center gap-3">
               <div className="w-6 h-6 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-xs font-bold font-mono text-stone-300">1</div>
-              <p className="text-[11px] text-stone-300 font-light">Client valide sa table en <strong className="text-white">Next.js</strong> (vitesse instantanée).</p>
+              <p className="text-[11px] text-stone-300 font-light">
+                {bookingType === "room" ? (
+                  <>Sélection d'hébergement Next.js avec <strong className="text-white">calcul de nuitées instantané</strong>.</>
+                ) : (
+                  <>Réservation de table et emplacement avec <strong className="text-white">vitesse de chargement &lt; 0.8s</strong>.</>
+                )}
+              </p>
             </div>
             <div className="w-[1px] h-3 bg-stone-700 ml-3" />
             <div className="flex items-center gap-3">
               <div className="w-6 h-6 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center justify-center text-xs font-bold font-mono text-amber-400">2</div>
-              <p className="text-[11px] text-stone-300 font-light">Paiement d'acompte sécurisé en ligne par <strong className="text-amber-400">Mobile Money / Cartes</strong>.</p>
+              <p className="text-[11px] text-stone-300 font-light">Paiement d'acompte obligatoire ou conseillé par <strong className="text-amber-400">MTN MoMo / Moov Flooz</strong>.</p>
             </div>
             <div className="w-[1px] h-3 bg-stone-700 ml-3" />
             <div className="flex items-center gap-3">
               <div className="w-6 h-6 bg-blue-500/10 border border-blue-500/20 rounded-full flex items-center justify-center text-xs font-bold font-mono text-blue-400">3</div>
-              <p className="text-[11px] text-stone-300 font-light">Alerte immédiate envoyée à la réception via <strong className="text-blue-400">Telegram API</strong>.</p>
+              <p className="text-[11px] text-stone-300 font-light">Alerte réception immédiate via <strong className="text-blue-400">Telegram API</strong> (chambre bloquée ou table attribuée).</p>
             </div>
             <div className="w-[1px] h-3 bg-stone-700 ml-3" />
             <div className="flex items-center gap-3">
               <div className="w-6 h-6 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center text-xs font-bold font-mono text-emerald-400">4</div>
-              <p className="text-[11px] text-stone-300 font-light">Confirmation et ticket client envoyés par <strong className="text-emerald-400">WhatsApp API</strong>.</p>
+              <p className="text-[11px] text-stone-300 font-light">Confirmation officielle et billet électronique envoyés par <strong className="text-emerald-400">WhatsApp API</strong>.</p>
             </div>
           </div>
 
           <div className="space-y-3 text-xs text-stone-400">
             <div className="flex items-center gap-2">
               <span className="text-emerald-500">✔</span>
-              <span>Aucune perte de temps pour vos serveurs.</span>
+              <span>Supprime les commissions des intermédiaires (Booking, Expedia).</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-emerald-500">✔</span>
-              <span>100% de marges gardées chez vous.</span>
+              <span>Garantit l'absence de "no-show" grâce aux acomptes automatisés.</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-[#0C0A09]/60 border border-white/10 rounded-3xl p-6 relative min-h-[380px] flex flex-col justify-between overflow-hidden shadow-2xl">
+        <div className="bg-[#0C0A09]/60 border border-white/10 rounded-3xl p-6 relative min-h-[420px] flex flex-col justify-between overflow-hidden shadow-2xl">
           {stage === "form" && (
             <form onSubmit={handleSimulateSubmit} className="space-y-4 flex-grow flex flex-col justify-between">
               <div>
                 <div className="text-center pb-3 border-b border-white/5 mb-4">
-                  <span className="text-[10px] uppercase tracking-wider text-stone-400 font-bold block">
+                  <span className="text-[10px] uppercase tracking-wider text-stone-400 font-bold block mb-2">
                     Interface Client (Maison Rouge)
                   </span>
+                  
+                  {/* TYPE DE RESERVATION SELECTOR */}
+                  <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setBookingType("room")}
+                      className={`flex-grow flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        bookingType === "room" ? "bg-elite-gold text-black font-semibold" : "text-stone-400 hover:text-white"
+                      }`}
+                    >
+                      <Bed size={14} />
+                      Chambre / Suite
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBookingType("table")}
+                      className={`flex-grow flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        bookingType === "table" ? "bg-elite-gold text-black font-semibold" : "text-stone-400 hover:text-white"
+                      }`}
+                    >
+                      <Utensils size={14} />
+                      Table Restaurant
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="space-y-4">
+                  {/* NOM COMPLET */}
                   <div className="space-y-1">
                     <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
                       Nom Complet
@@ -406,77 +510,217 @@ function PrototypeSandbox() {
                       required
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-elite-gold transition-colors text-white"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-elite-gold transition-colors text-white"
                       placeholder="Ex: Christian L."
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
-                        Couverts
-                      </label>
-                      <select
-                        value={formData.guests}
-                        onChange={(e) => setFormData({ ...formData, guests: Number(e.target.value) })}
-                        className="w-full bg-stone-900 border border-white/10 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-elite-gold text-white"
-                      >
-                        {[1, 2, 3, 4, 5, 6].map((num) => (
-                          <option key={num} value={num}>
-                            {num} {num > 1 ? "personnes" : "personne"}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
-                        Heure
-                      </label>
-                      <input
-                        type="time"
-                        value={formData.time}
-                        onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-elite-gold text-white"
-                      />
-                    </div>
-                  </div>
-
-                  {/* DEPOSIT MODE SELECTOR */}
-                  <div className="space-y-2">
-                    <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
-                      Option de Réservation
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setRequireDeposit(false)}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                          !requireDeposit
-                            ? "border-white/20 bg-white/5"
-                            : "border-white/5 bg-transparent opacity-60 hover:opacity-100"
-                        }`}
-                      >
-                        <span className="text-[10px] font-bold block text-white">Réservation simple</span>
-                        <span className="text-[8px] text-stone-400 block mt-0.5">Sans acompte en ligne</span>
-                      </button>
-                      
-                      <button
-                        type="button"
-                        onClick={() => setRequireDeposit(true)}
-                        className={`p-3 rounded-xl border text-left transition-all relative overflow-hidden cursor-pointer ${
-                          requireDeposit
-                            ? "border-elite-gold bg-elite-gold/5 shadow-[0_0_15px_rgba(202,138,4,0.1)]"
-                            : "border-white/5 bg-transparent opacity-60 hover:opacity-100"
-                        }`}
-                      >
-                        <div className="absolute top-0 right-0 bg-elite-gold text-[7px] text-black font-extrabold px-1.5 py-0.5 rounded-bl-lg uppercase tracking-wider">
-                          Recommandé
+                  {/* ROOM FIELDS */}
+                  {bookingType === "room" && (
+                    <>
+                      {/* ROOM TYPE RADIOS */}
+                      <div className="space-y-2">
+                        <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                          Sélectionnez votre hébergement
+                        </label>
+                        <div className="space-y-1.5">
+                          {[
+                            { id: "executive", name: "Chambre Executive", price: 25000, desc: "Lit King size, vue jardin, wifi haut débit" },
+                            { id: "suite", name: "Suite Executive Vue Mer", price: 45000, desc: "Balcon privé face mer, salon spacieux" },
+                            { id: "royale", name: "Suite Royale Maison Rouge", price: 75000, desc: "Jacuzzi privé, majordome, vue panoramique" }
+                          ].map((room) => {
+                            const isSelected = formData.roomType === room.id;
+                            return (
+                              <button
+                                key={room.id}
+                                type="button"
+                                onClick={() => setFormData({ ...formData, roomType: room.id })}
+                                className={`w-full p-2.5 rounded-xl border text-left transition-all flex justify-between items-center cursor-pointer ${
+                                  isSelected 
+                                    ? "border-elite-gold bg-elite-gold/5 shadow-[0_0_15px_rgba(202,138,4,0.05)]"
+                                    : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
+                                }`}
+                              >
+                                <div>
+                                  <span className={`text-[10px] font-bold block ${isSelected ? "text-elite-gold" : "text-white"}`}>
+                                    {room.name}
+                                  </span>
+                                  <span className="text-[8px] text-stone-400 block font-light leading-none mt-0.5">{room.desc}</span>
+                                </div>
+                                <span className="text-[10px] font-bold text-elite-gold font-mono whitespace-nowrap ml-2">
+                                  {room.price / 1000}k FCFA
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
-                        <span className="text-[10px] font-bold block text-elite-gold">Avec Acompte</span>
-                        <span className="text-[8px] text-stone-300 block mt-0.5">Mobile Money (5 000 FCFA)</span>
-                      </button>
-                    </div>
-                  </div>
+                      </div>
+
+                      {/* ARRIVÉE / DÉPART */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                            Arrivée
+                          </label>
+                          <input
+                            type="date"
+                            required
+                            value={formData.checkIn}
+                            onChange={(e) => setFormData({ ...formData, checkIn: e.target.value })}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-elite-gold text-white font-mono"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                            Départ
+                          </label>
+                          <input
+                            type="date"
+                            required
+                            value={formData.checkOut}
+                            onChange={(e) => setFormData({ ...formData, checkOut: e.target.value })}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-elite-gold text-white font-mono"
+                          />
+                        </div>
+                      </div>
+
+                      {/* STAY SUMMARY */}
+                      <div className="p-3 bg-white/5 border border-white/10 rounded-xl flex justify-between items-center text-xs font-mono">
+                        <div className="text-stone-400 text-[10px]">
+                          Séjour de {roomNights} {roomNights > 1 ? "nuits" : "nuit"}
+                        </div>
+                        <div className="text-right">
+                          <span className="text-stone-400 text-[10px] block line-through">Total: {formatFCFA(roomTotal)}</span>
+                          <span className="text-emerald-400 font-bold block">Acompte requis: {formatFCFA(roomDeposit)}</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* TABLE FIELDS */}
+                  {bookingType === "table" && (
+                    <>
+                      {/* COUVERTS & DATE/TIME */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                            Couverts
+                          </label>
+                          <select
+                            value={formData.guests}
+                            onChange={(e) => setFormData({ ...formData, guests: Number(e.target.value) })}
+                            className="w-full bg-stone-900 border border-white/10 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-elite-gold text-white"
+                          >
+                            {[1, 2, 3, 4, 5, 6].map((num) => (
+                              <option key={num} value={num}>
+                                {num} {num > 1 ? "pers." : "pers."}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1 col-span-2">
+                          <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                            Date & Heure
+                          </label>
+                          <div className="flex gap-1.5">
+                            <input
+                              type="date"
+                              required
+                              value={formData.tableDate}
+                              onChange={(e) => setFormData({ ...formData, tableDate: e.target.value })}
+                              className="w-[60%] bg-white/5 border border-white/10 rounded-xl px-2 py-2 text-[10px] focus:outline-none focus:border-elite-gold text-white font-mono"
+                            />
+                            <input
+                              type="time"
+                              required
+                              value={formData.time}
+                              onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                              className="w-[40%] bg-white/5 border border-white/10 rounded-xl px-2 py-2 text-[10px] focus:outline-none focus:border-elite-gold text-white font-mono"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* TABLE LOCATION RADIOS */}
+                      <div className="space-y-2">
+                        <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                          Choix de la table
+                        </label>
+                        <div className="space-y-1.5">
+                          {[
+                            { id: "terrasse", name: "Côté Mer (Terrasse)", price: "Gratuit", desc: "Brise marine, vue directe sur l'océan" },
+                            { id: "climatisee", name: "Salle Climatisée", price: "Gratuit", desc: "Cadre feutré, calme et rafraîchissant" },
+                            { id: "vip", name: "Salon VIP (Acompte requis)", price: "10 000 FCFA", desc: "Intimité absolue, service exclusif dédié" }
+                          ].map((loc) => {
+                            const isSelected = formData.tableLocation === loc.id;
+                            return (
+                              <button
+                                key={loc.id}
+                                type="button"
+                                onClick={() => {
+                                  setFormData({ ...formData, tableLocation: loc.id });
+                                  if (loc.id === "vip") {
+                                    setRequireDeposit(true);
+                                  }
+                                }}
+                                className={`w-full p-2.5 rounded-xl border text-left transition-all flex justify-between items-center cursor-pointer ${
+                                  isSelected 
+                                    ? "border-elite-gold bg-elite-gold/5 shadow-[0_0_15px_rgba(202,138,4,0.05)]"
+                                    : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
+                                }`}
+                              >
+                                <div>
+                                  <span className={`text-[10px] font-bold block ${isSelected ? "text-elite-gold" : "text-white"}`}>
+                                    {loc.name}
+                                  </span>
+                                  <span className="text-[8px] text-stone-400 block font-light leading-none mt-0.5">{loc.desc}</span>
+                                </div>
+                                <span className="text-[10px] font-bold text-elite-gold font-mono whitespace-nowrap ml-2">
+                                  {loc.price}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* DEPOSIT OPTION (IF NOT VIP) */}
+                      {formData.tableLocation !== "vip" && (
+                        <div className="space-y-2">
+                          <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                            Option de Paiement
+                          </label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setRequireDeposit(false)}
+                              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                                !requireDeposit
+                                  ? "border-white/20 bg-white/5"
+                                  : "border-white/5 bg-transparent opacity-60 hover:opacity-100"
+                              }`}
+                            >
+                              <span className="text-[10px] font-bold block text-white">Réservation simple</span>
+                              <span className="text-[8px] text-stone-400 block mt-0.5">Zéro acompte requis</span>
+                            </button>
+                            
+                            <button
+                              type="button"
+                              onClick={() => setRequireDeposit(true)}
+                              className={`p-2.5 rounded-xl border text-left transition-all relative overflow-hidden cursor-pointer ${
+                                requireDeposit
+                                  ? "border-elite-gold bg-elite-gold/5 shadow-[0_0_15px_rgba(202,138,4,0.05)]"
+                                  : "border-white/5 bg-transparent opacity-60 hover:opacity-100"
+                              }`}
+                            >
+                              <span className="text-[10px] font-bold block text-elite-gold">Avec Acompte</span>
+                              <span className="text-[8px] text-stone-300 block mt-0.5">Garantie (5 000 FCFA)</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -484,13 +728,13 @@ function PrototypeSandbox() {
                 type="submit"
                 className="w-full bg-elite-gold hover:bg-elite-gold-light text-black py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer mt-6 shadow-lg shadow-elite-gold/15"
               >
-                Réserver ma table
+                {bookingType === "room" || depositRequired > 0 ? "Procéder à l'acompte" : "Confirmer ma réservation"}
               </button>
             </form>
           )}
 
           {stage === "payment" && (
-            <form onSubmit={handlePaymentSubmit} className="space-y-4 flex-grow flex flex-col justify-between">
+            <form onSubmit={handlePaymentSubmit} className="space-y-4 flex-grow flex flex-col justify-between animate-fade-in">
               <div className="space-y-4">
                 <div className="text-center pb-2 border-b border-white/5">
                   <span className="text-[10px] uppercase tracking-wider text-amber-500 font-bold block">
@@ -498,14 +742,30 @@ function PrototypeSandbox() {
                   </span>
                 </div>
 
-                <div className="p-3 bg-white/5 border border-white/10 rounded-xl flex justify-between items-center text-xs">
-                  <div>
-                    <p className="text-[9px] text-stone-455 uppercase">Établissement</p>
-                    <p className="font-bold text-white">Hôtel Maison Rouge</p>
+                <div className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-2 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-stone-400">Établissement</span>
+                    <span className="font-bold text-white">Hôtel Maison Rouge</span>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[9px] text-stone-455 uppercase">Acompte requis</p>
-                    <p className="font-bold text-elite-gold">5 000 FCFA</p>
+                  <div className="flex justify-between items-center border-t border-white/5 pt-2">
+                    <span className="text-stone-400">
+                      {bookingType === "room" ? "Réservation de Chambre" : "Réservation de Table"}
+                    </span>
+                    <span className="text-stone-300">
+                      {bookingType === "room" ? (
+                        <>
+                          {formData.roomType === "executive" && "Chambre Exec."}
+                          {formData.roomType === "suite" && "Suite Exec."}
+                          {formData.roomType === "royale" && "Suite Royale"} ({roomNights} nuits)
+                        </>
+                      ) : (
+                        <>Table: {formData.tableLocation.toUpperCase()}</>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center border-t border-white/5 pt-2">
+                    <span className="text-stone-400">Acompte requis</span>
+                    <span className="font-bold text-elite-gold font-mono">{formatFCFA(depositRequired)}</span>
                   </div>
                 </div>
 
@@ -517,10 +777,10 @@ function PrototypeSandbox() {
                     <button
                       type="button"
                       onClick={() => setMomoOperator("mtn")}
-                      className={`py-2.5 rounded-xl text-[10px] font-bold uppercase border transition-all ${
+                      className={`py-2.5 rounded-xl text-[10px] font-bold uppercase border transition-all cursor-pointer ${
                         momoOperator === "mtn"
                           ? "bg-amber-500/20 border-amber-500 text-amber-300"
-                          : "bg-white/5 border-white/10 text-stone-400"
+                          : "bg-white/5 border-white/10 text-stone-400 hover:text-white"
                       }`}
                     >
                       MTN MoMo
@@ -528,10 +788,10 @@ function PrototypeSandbox() {
                     <button
                       type="button"
                       onClick={() => setMomoOperator("moov")}
-                      className={`py-2.5 rounded-xl text-[10px] font-bold uppercase border transition-all ${
+                      className={`py-2.5 rounded-xl text-[10px] font-bold uppercase border transition-all cursor-pointer ${
                         momoOperator === "moov"
                           ? "bg-blue-500/20 border-blue-500 text-blue-300"
-                          : "bg-white/5 border-white/10 text-stone-400"
+                          : "bg-white/5 border-white/10 text-stone-400 hover:text-white"
                       }`}
                     >
                       Moov Flooz
@@ -564,24 +824,24 @@ function PrototypeSandbox() {
                 type="submit"
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-emerald-500/20 mt-6"
               >
-                Payer 5 000 FCFA
+                Payer {formatFCFA(depositRequired)}
               </button>
             </form>
           )}
 
           {stage === "paying" && (
-            <div className="flex-grow flex flex-col items-center justify-center text-center space-y-4">
+            <div className="flex-grow flex flex-col items-center justify-center text-center space-y-4 animate-fade-in">
               <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center animate-pulse text-emerald-400">
                 <MessageCircle size={28} />
               </div>
               <div className="space-y-2">
                 <h4 className="text-sm font-bold text-white">Demande de débit envoyée !</h4>
                 <p className="text-stone-400 text-[10px] leading-relaxed max-w-xs mx-auto">
-                  Un pop-up de validation a été envoyé sur le numéro{" "}
+                  Un pop-up de validation USSD a été poussé sur le numéro{" "}
                   <strong className="font-mono text-white">+229 {momoNumber}</strong>.
                   <br />
-                  Saisissez votre code PIN sur votre mobile pour valider l'acompte de{" "}
-                  <strong className="text-elite-gold">5 000 FCFA</strong>.
+                  Saisissez votre code PIN {momoOperator.toUpperCase()} sur votre mobile pour valider l'acompte de{" "}
+                  <strong className="text-elite-gold">{formatFCFA(depositRequired)}</strong>.
                 </p>
               </div>
               <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mt-4" />
@@ -589,20 +849,20 @@ function PrototypeSandbox() {
           )}
 
           {stage === "sent" && (
-            <div className="flex-grow flex flex-col items-center justify-center text-center space-y-4">
+            <div className="flex-grow flex flex-col items-center justify-center text-center space-y-4 animate-fade-in">
               <div className="w-12 h-12 border-2 border-elite-gold border-t-transparent rounded-full animate-spin" />
               <div>
                 <h4 className="text-sm font-bold text-white">Traitement de la réservation...</h4>
                 <p className="text-stone-500 text-[10px] mt-1">
-                  Envoi des notifications simultanées à la réception et au client
+                  Création du ticket de séjour et envoi des webhooks Telegram & WhatsApp
                 </p>
               </div>
             </div>
           )}
 
           {stage === "reception" && (
-            <div className="flex-grow flex flex-col justify-between space-y-6">
-              <div className="space-y-4 flex-grow">
+            <div className="flex-grow flex flex-col justify-between space-y-6 animate-fade-in">
+              <div className="space-y-4 flex-grow overflow-y-auto max-h-[360px] pr-1">
                 <div className="text-center pb-2 border-b border-white/5 mb-3">
                   <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-bold block animate-pulse">
                     🟢 DÉPLOIEMENT ACTIVÉ (TEMPS RÉEL)
@@ -610,56 +870,76 @@ function PrototypeSandbox() {
                 </div>
 
                 {/* Simulated Telegram Notification (Reception Alert) */}
-                <div className="p-3.5 bg-slate-900 border border-blue-500/30 rounded-2xl space-y-2 text-left animate-slide-in shadow-lg">
+                <div className="p-3.5 bg-slate-900 border border-blue-500/30 rounded-2xl space-y-2 text-left shadow-lg">
                   <div className="flex justify-between items-center text-[9px] font-bold text-blue-400">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-blue-500 flex items-center justify-center text-[7px] text-white font-mono">T</span>
                       <span>TELEGRAM RÉCEPTION (MAISON ROUGE)</span>
                     </div>
-                    <span className="font-mono text-stone-500">10:30</span>
+                    <span className="font-mono text-stone-500">A l'instant</span>
                   </div>
-                  <div className="text-xs text-stone-200 leading-relaxed font-mono">
-                    🚨 <strong>NOUVELLE DEMANDE :</strong>
+                  <div className="text-[11px] text-stone-200 leading-relaxed font-mono">
+                    🚨 <strong>NOUVEAU DOSSIER :</strong>
                     <div className="pl-3 mt-1 border-l border-blue-500/20 text-stone-300 space-y-0.5">
                       <div>• Client: {formData.name}</div>
-                      <div>• Couverts: {formData.guests}</div>
-                      <div>• Heure: {formData.time}</div>
-                      {requireDeposit ? (
-                        <div className="text-emerald-400 font-bold">
-                          • Paiement: Acompte 5 000 FCFA validé ({momoOperator.toUpperCase()} MoMo) 🟢
-                        </div>
+                      {bookingType === "room" ? (
+                        <>
+                          <div>• Type: Hébergement ({formData.roomType.toUpperCase()})</div>
+                          <div>• Dates: du {formData.checkIn} au {formData.checkOut} ({roomNights} nuits)</div>
+                          <div>• Voyageurs: {formData.roomGuests} personnes</div>
+                          <div>• Montant total: {formatFCFA(roomTotal)}</div>
+                          <div className="text-emerald-400 font-bold">
+                            • Acompte validé: {formatFCFA(roomDeposit)} ({momoOperator.toUpperCase()} MoMo) 🟢
+                          </div>
+                        </>
                       ) : (
-                        <div className="text-amber-500 font-bold">
-                          • Paiement: Sur place (Pas d'acompte) ⚠️
-                        </div>
+                        <>
+                          <div>• Type: Table Restaurant</div>
+                          <div>• Couverts: {formData.guests} couverts</div>
+                          <div>• Date & Heure: le {formData.tableDate} à {formData.time}</div>
+                          <div>• Emplacement: {formData.tableLocation.toUpperCase()}</div>
+                          {depositRequired > 0 ? (
+                            <div className="text-emerald-400 font-bold">
+                              • Acompte validé: {formatFCFA(tableDeposit)} ({momoOperator.toUpperCase()} MoMo) 🟢
+                            </div>
+                          ) : (
+                            <div className="text-amber-500 font-bold">
+                              • Statut acompte: Aucun (Règlement sur place) ⚠️
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
                 </div>
 
                 {/* Simulated WhatsApp Chat Bubble (Client Ticket) */}
-                <div className="p-4 bg-[#005c4b] border border-emerald-500/30 rounded-2xl space-y-1.5 text-left animate-slide-in-delay shadow-lg max-w-[85%] ml-auto relative">
-                  {/* Speech Bubble Tail */}
+                <div className="p-4 bg-[#005c4b] border border-emerald-500/30 rounded-2xl space-y-1.5 text-left shadow-lg max-w-[90%] ml-auto relative">
                   <div className="absolute top-0 right-0 -mr-1.5 w-3 h-3 bg-[#005c4b] rotate-45 border-r border-t border-emerald-500/30" />
                   
                   <div className="flex justify-between items-center text-[8px] text-emerald-300 font-bold">
                     <span>Maison Rouge Cotonou (Officiel)</span>
                     <span className="text-[7px] font-normal text-emerald-400">✓✓</span>
                   </div>
-                  {requireDeposit ? (
+                  
+                  {bookingType === "room" ? (
                     <p className="text-[11px] text-white leading-relaxed">
-                      Bonjour {formData.name}, votre réservation pour {formData.guests} personnes ce soir à{" "}
-                      {formData.time} à l'Hôtel Maison Rouge est bien validée.<br />
-                      💵 <strong>Acompte reçu :</strong> 5 000 FCFA par Mobile Money. Solde à régler sur place. Merci !
+                      Bonjour {formData.name}, votre réservation pour la <strong>{formData.roomType === "executive" ? "Chambre Executive" : formData.roomType === "suite" ? "Suite Executive Vue Mer" : "Suite Royale Maison Rouge"}</strong> du {formData.checkIn} au {formData.checkOut} ({roomNights} nuits) est confirmée. <br />
+                      💵 <strong>Acompte reçu :</strong> {formatFCFA(roomDeposit)} ({momoOperator.toUpperCase()} MoMo). <br />
+                      🔑 Votre chambre sera prête dès 14h. Bienvenue à la Maison Rouge !
                     </p>
                   ) : (
                     <p className="text-[11px] text-white leading-relaxed">
-                      Bonjour {formData.name}, votre réservation pour {formData.guests} personnes ce soir à{" "}
-                      {formData.time} à l'Hôtel Maison Rouge est bien enregistrée. Règlement sur place. À tout à l'heure ! 🍷
+                      Bonjour {formData.name}, votre table de {formData.guests} personnes (emplacement: {formData.tableLocation === "terrasse" ? "Côté Mer (Terrasse)" : formData.tableLocation === "climatisee" ? "Salle Climatisée" : "Salon VIP"}) est bien réservée pour le {formData.tableDate} à {formData.time}. <br />
+                      {depositRequired > 0 ? (
+                        <>💵 <strong>Acompte de garantie validé :</strong> {formatFCFA(tableDeposit)}. Solde à régler sur place. Merci !</>
+                      ) : (
+                        <>🍷 Aucun acompte requis. Règlement sur place. À très bientôt !</>
+                      )}
                     </p>
                   )}
                   <div className="text-right text-[7px] text-emerald-400/80 font-mono">
-                    10:30
+                    A l'instant
                   </div>
                 </div>
               </div>
@@ -668,7 +948,7 @@ function PrototypeSandbox() {
                 onClick={resetSandbox}
                 className="w-full border border-white/10 hover:border-white/20 text-stone-400 hover:text-white py-3.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer hover:bg-white/[0.02]"
               >
-                Réessayer la simulation
+                Simuler une nouvelle réservation
               </button>
             </div>
           )}
