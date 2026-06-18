@@ -22,7 +22,13 @@ import {
   Calendar,
   Users,
   Clock,
-  CreditCard
+  CreditCard,
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  ListChecks,
+  TrendingUp,
+  Sparkles
 } from "lucide-react";
 
 // ANIMATION CONSTANTS
@@ -300,28 +306,40 @@ function RoiSimulator({ onCtaClick }: RoiSimulatorProps) {
   );
 }
 
-// --- INTERACTIVE PROTOTYPE SANDBOX COMPONENT ---
+// --- INTERACTIVE PROTOTYPE SANDBOX ---
 function PrototypeSandbox() {
   const [bookingType, setBookingType] = useState<"room" | "table">("room");
+  const [bookingStep, setBookingStep] = useState<"dates" | "rooms" | "extras" | "checkout">("dates");
   const [formData, setFormData] = useState({
     name: "",
-    // Room fields
-    roomType: "suite",
+    // Common fields
     checkIn: new Date().toISOString().split("T")[0],
     checkOut: new Date(Date.now() + 86400000).toISOString().split("T")[0],
-    roomGuests: 2,
-    // Table fields
     guests: 2,
     time: "20:00",
-    tableLocation: "terrasse",
-    tableDate: new Date().toISOString().split("T")[0]
+    
+    // Room fields
+    roomType: "suite", // "executive" | "suite" | "royale"
+    ratePlan: "refundable", // "refundable" | "non_refundable"
+    
+    // Table fields
+    tableLocation: "terrasse", // "terrasse" | "climatisee" | "vip"
+    tableDate: new Date().toISOString().split("T")[0],
+    
+    // Add-on Options (Upsells)
+    shuttle: false,     // +10 000 FCFA
+    breakfast: false,   // +7 500 FCFA/day/person
+    spa: false,         // +25 000 FCFA
+    champagne: false    // +40 000 FCFA
   });
   const [requireDeposit, setRequireDeposit] = useState(true);
   const [momoNumber, setMomoNumber] = useState("0167750083");
   const [momoOperator, setMomoOperator] = useState<"mtn" | "moov">("mtn");
   const [stage, setStage] = useState<"form" | "payment" | "paying" | "sent" | "reception">("form");
+  const [successView, setSuccessView] = useState<"client" | "pms">("client");
+  const [preRegisterStage, setPreRegisterStage] = useState<"none" | "start" | "scanning" | "done">("none");
 
-  // Helper formatting function
+  // Format helper
   const formatFCFA = (val: number) => {
     return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " FCFA";
   };
@@ -334,29 +352,38 @@ function PrototypeSandbox() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
   };
 
+  const nights = getStayNights();
+
   const getRoomPricePerNight = () => {
-    if (formData.roomType === "executive") return 25000;
-    if (formData.roomType === "suite") return 45000;
-    return 75000;
+    let base = 25000; // Chambre Executive
+    if (formData.roomType === "suite") base = 45000; // Suite Executive
+    if (formData.roomType === "royale") base = 75000; // Suite Royale
+    if (formData.ratePlan === "non_refundable") base = base * 0.9; // 10% discount
+    return Math.round(base);
   };
 
-  const getRoomDepositPerNight = () => {
-    if (formData.roomType === "executive") return 10000;
-    if (formData.roomType === "suite") return 15000;
-    return 25000;
-  };
-
-  const roomNights = getStayNights();
   const roomPricePerNight = getRoomPricePerNight();
-  const roomTotal = roomPricePerNight * roomNights;
-  const roomDeposit = getRoomDepositPerNight() * roomNights;
+  const roomSubtotal = roomPricePerNight * nights;
 
-  const getTableDeposit = () => {
-    if (formData.tableLocation === "vip") return 10000;
-    return requireDeposit ? 5000 : 0;
-  };
+  // Add-on Cost Calculations
+  const shuttleCost = formData.shuttle ? 10000 : 0;
+  const breakfastCost = formData.breakfast ? 7500 * nights * formData.guests : 0;
+  const spaCost = formData.spa ? 25000 : 0;
+  const champagneCost = formData.champagne ? 40000 : 0;
+  const extrasSubtotal = shuttleCost + breakfastCost + spaCost + champagneCost;
 
-  const tableDeposit = getTableDeposit();
+  // Hotel booking taxes
+  const touristTax = bookingType === "room" ? 1000 * nights * formData.guests : 0; // 1000 FCFA per person per night
+  const taxBase = roomSubtotal + extrasSubtotal;
+  const vatAmount = Math.round(taxBase * 0.18); // TVA 18%
+  const grandTotal = taxBase + touristTax + vatAmount;
+
+  // Guaranteed Booking Deposit
+  // Room: 1 night base + VAT & extras or just flat 1 night
+  const roomDeposit = Math.round(roomPricePerNight * 1.18) + (formData.champagne ? 40000 : 0);
+
+  // Table Booking
+  const tableDeposit = formData.tableLocation === "vip" ? 10000 : (requireDeposit ? 5000 : 0);
 
   const getDepositRequired = () => {
     return bookingType === "room" ? roomDeposit : tableDeposit;
@@ -366,11 +393,18 @@ function PrototypeSandbox() {
 
   const handleSimulateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const needsPay = bookingType === "room" || depositRequired > 0;
-    if (needsPay) {
-      setStage("payment");
+    if (bookingStep !== "checkout") {
+      // Step progression
+      if (bookingStep === "dates") setBookingStep("rooms");
+      else if (bookingStep === "rooms") setBookingStep("extras");
+      else if (bookingStep === "extras") setBookingStep("checkout");
     } else {
-      triggerProcessing();
+      const needsPay = bookingType === "room" || depositRequired > 0;
+      if (needsPay) {
+        setStage("payment");
+      } else {
+        triggerProcessing();
+      }
     }
   };
 
@@ -392,566 +426,934 @@ function PrototypeSandbox() {
   const resetSandbox = () => {
     setFormData({
       name: "",
-      roomType: "suite",
       checkIn: new Date().toISOString().split("T")[0],
       checkOut: new Date(Date.now() + 86400000).toISOString().split("T")[0],
-      roomGuests: 2,
       guests: 2,
       time: "20:00",
+      roomType: "suite",
+      ratePlan: "refundable",
       tableLocation: "terrasse",
-      tableDate: new Date().toISOString().split("T")[0]
+      tableDate: new Date().toISOString().split("T")[0],
+      shuttle: false,
+      breakfast: false,
+      spa: false,
+      champagne: false
     });
     setRequireDeposit(true);
     setMomoNumber("0167750083");
+    setBookingStep("dates");
     setStage("form");
+    setSuccessView("client");
+    setPreRegisterStage("none");
   };
 
   return (
     <div className="liquid-glass p-8 md:p-12 rounded-[2.5rem] border-white/5 relative overflow-hidden max-w-4xl mx-auto text-left">
       <div className="absolute top-0 left-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
       <div className="grid md:grid-cols-2 gap-12 items-stretch">
+        
+        {/* LEFT PANEL - SALES PROPOSITION */}
         <div className="flex flex-col justify-between">
           <div>
             <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full">
-              Démonstration Interactive Pro
+              Simulateur de Systèmes Hôteliers PMS
             </span>
             <h3 className="text-3xl md:text-4xl font-display font-bold mt-4 mb-2">
-              Moteur de Réservation Elite
+              Le standard des hôtels 5 étoiles
             </h3>
             <p className="text-stone-400 text-sm font-light leading-relaxed mb-6">
-              Simulation complète du flux client et hôtelier pour l'<strong>Hôtel Maison Rouge</strong>. Basculez entre la réservation de Chambres/Suites et celle du Restaurant haut de gamme.
+              Démontrez la puissance d'un moteur de vente directe moderne face aux décideurs de la <strong>Maison Rouge</strong>. Ce simulateur montre comment nous gérons la réservation, l'encaissement et le suivi opérationnel.
             </p>
           </div>
 
           {/* VISUAL FLOW DIAGRAM */}
           <div className="space-y-4 bg-elite-black/20 p-6 rounded-2xl border border-white/5 my-6">
-            <span className="text-[9px] uppercase tracking-widest text-stone-400 font-bold block mb-2">Flux Technique Exécuté</span>
+            <span className="text-[9px] uppercase tracking-widest text-stone-400 font-bold block mb-2">Cycle Opérationnel Simulé</span>
             <div className="flex items-center gap-3">
               <div className="w-6 h-6 bg-white/5 border border-white/10 rounded-full flex items-center justify-center text-xs font-bold font-mono text-stone-300">1</div>
               <p className="text-[11px] text-stone-300 font-light">
-                {bookingType === "room" ? (
-                  <>Sélection d'hébergement Next.js avec <strong className="text-white">calcul de nuitées instantané</strong>.</>
-                ) : (
-                  <>Réservation de table et emplacement avec <strong className="text-white">vitesse de chargement &lt; 0.8s</strong>.</>
-                )}
+                Réservation directe avec options : <strong className="text-white">Navette aéroport, Spa, Petit-déjeuner</strong>.
               </p>
             </div>
             <div className="w-[1px] h-3 bg-stone-700 ml-3" />
             <div className="flex items-center gap-3">
               <div className="w-6 h-6 bg-amber-500/10 border border-amber-500/20 rounded-full flex items-center justify-center text-xs font-bold font-mono text-amber-400">2</div>
-              <p className="text-[11px] text-stone-300 font-light">Paiement d'acompte obligatoire ou conseillé par <strong className="text-amber-400">MTN MoMo / Moov Flooz</strong>.</p>
+              <p className="text-[11px] text-stone-300 font-light">Calcul automatique des <strong className="text-amber-400">Taxes de Séjour & TVA locale</strong> de 18%.</p>
             </div>
             <div className="w-[1px] h-3 bg-stone-700 ml-3" />
             <div className="flex items-center gap-3">
               <div className="w-6 h-6 bg-blue-500/10 border border-blue-500/20 rounded-full flex items-center justify-center text-xs font-bold font-mono text-blue-400">3</div>
-              <p className="text-[11px] text-stone-300 font-light">Alerte réception immédiate via <strong className="text-blue-400">Telegram API</strong> (chambre bloquée ou table attribuée).</p>
+              <p className="text-[11px] text-stone-300 font-light">Vérification de l'acompte de garantie requis sur le <strong className="text-blue-400">PMS de la Réception</strong>.</p>
             </div>
             <div className="w-[1px] h-3 bg-stone-700 ml-3" />
             <div className="flex items-center gap-3">
               <div className="w-6 h-6 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center text-xs font-bold font-mono text-emerald-400">4</div>
-              <p className="text-[11px] text-stone-300 font-light">Confirmation officielle et billet électronique envoyés par <strong className="text-emerald-400">WhatsApp API</strong>.</p>
+              <p className="text-[11px] text-stone-300 font-light">Flux de <strong className="text-emerald-400">Pré-enregistrement avec Passeport</strong> envoyé par WhatsApp.</p>
             </div>
           </div>
 
           <div className="space-y-3 text-xs text-stone-400">
             <div className="flex items-center gap-2">
               <span className="text-emerald-500">✔</span>
-              <span>Supprime les commissions des intermédiaires (Booking, Expedia).</span>
+              <span>Augmente le panier moyen client de +25% via le surclassement de services (upsell).</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-emerald-500">✔</span>
-              <span>Garantit l'absence de "no-show" grâce aux acomptes automatisés.</span>
+              <span>Supprime le temps d'attente à la réception à l'arrivée (Check-in en 30s).</span>
             </div>
           </div>
         </div>
 
-        <div className="bg-[#0C0A09]/60 border border-white/10 rounded-3xl p-6 relative min-h-[420px] flex flex-col justify-between overflow-hidden shadow-2xl">
-          {stage === "form" && (
-            <form onSubmit={handleSimulateSubmit} className="space-y-4 flex-grow flex flex-col justify-between">
-              <div>
-                <div className="text-center pb-3 border-b border-white/5 mb-4">
-                  <span className="text-[10px] uppercase tracking-wider text-stone-400 font-bold block mb-2">
-                    Interface Client (Maison Rouge)
-                  </span>
-                  
-                  {/* TYPE DE RESERVATION SELECTOR */}
-                  <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
-                    <button
-                      type="button"
-                      onClick={() => setBookingType("room")}
-                      className={`flex-grow flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        bookingType === "room" ? "bg-elite-gold text-black font-semibold" : "text-stone-400 hover:text-white"
-                      }`}
-                    >
-                      <Bed size={14} />
-                      Chambre / Suite
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setBookingType("table")}
-                      className={`flex-grow flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        bookingType === "table" ? "bg-elite-gold text-black font-semibold" : "text-stone-400 hover:text-white"
-                      }`}
-                    >
-                      <Utensils size={14} />
-                      Table Restaurant
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  {/* NOM COMPLET */}
-                  <div className="space-y-1">
-                    <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
-                      Nom Complet
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-elite-gold transition-colors text-white"
-                      placeholder="Ex: Christian L."
-                    />
+        {/* RIGHT PANEL - PHONE CONTAINER */}
+        <div className="bg-[#0C0A09]/80 border border-white/10 rounded-3xl relative min-h-[460px] flex flex-col justify-between overflow-hidden shadow-2xl">
+          
+          {/* iOS-Style Top Status Bar */}
+          <div className="flex justify-between items-center px-5 py-2 bg-black/40 text-[9px] text-stone-400 font-mono border-b border-white/5 select-none">
+            <span>13:47</span>
+            <div className="flex items-center gap-1.5">
+              <span>LTE</span>
+              <span className="w-4.5 h-2.5 border border-stone-500 rounded-sm p-[1px] flex items-center">
+                <span className="bg-emerald-400 h-full w-[80%] rounded-[1px]" />
+              </span>
+            </div>
+          </div>
+
+          {/* MAIN SIMULATOR AREA */}
+          <div className="p-5 flex-grow flex flex-col justify-between">
+            {stage === "form" && (
+              <form onSubmit={handleSimulateSubmit} className="space-y-4 flex-grow flex flex-col justify-between">
+                <div>
+                  {/* Step header indicator */}
+                  <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3">
+                    <div className="flex items-center gap-2">
+                      {bookingStep !== "dates" && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (bookingStep === "rooms") setBookingStep("dates");
+                            else if (bookingStep === "extras") setBookingStep("rooms");
+                            else if (bookingStep === "checkout") setBookingStep("extras");
+                          }}
+                          className="text-stone-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+                        >
+                          <ArrowLeft size={14} />
+                        </button>
+                      )}
+                      <span className="text-[10px] uppercase tracking-wider text-stone-400 font-bold block">
+                        {bookingType === "room" ? "Hébergement" : "Restaurant"} (Maison Rouge)
+                      </span>
+                    </div>
+                    
+                    {/* Progression dots */}
+                    <div className="flex gap-1.5">
+                      {["dates", "rooms", "extras", "checkout"].map((s, idx) => {
+                        const steps = ["dates", "rooms", "extras", "checkout"];
+                        const currentIdx = steps.indexOf(bookingStep);
+                        return (
+                          <div 
+                            key={s} 
+                            className={`w-2 h-2 rounded-full transition-all ${
+                              idx === currentIdx ? "bg-elite-gold scale-125" : idx < currentIdx ? "bg-emerald-500" : "bg-white/10"
+                            }`} 
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  {/* ROOM FIELDS */}
-                  {bookingType === "room" && (
-                    <>
-                      {/* ROOM TYPE RADIOS */}
-                      <div className="space-y-2">
+                  {/* STEP 1: DATES & TYPE */}
+                  {bookingStep === "dates" && (
+                    <div className="space-y-3 animate-fade-in">
+                      {/* TYPE DE RESERVATION SELECTOR */}
+                      <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 mb-4">
+                        <button
+                          type="button"
+                          onClick={() => setBookingType("room")}
+                          className={`flex-grow flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            bookingType === "room" ? "bg-elite-gold text-black font-semibold" : "text-stone-400 hover:text-white"
+                          }`}
+                        >
+                          <Bed size={13} />
+                          Hébergement
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBookingType("table")}
+                          className={`flex-grow flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            bookingType === "table" ? "bg-elite-gold text-black font-semibold" : "text-stone-400 hover:text-white"
+                          }`}
+                        >
+                          <Utensils size={13} />
+                          Restaurant
+                        </button>
+                      </div>
+
+                      {/* NOM COMPLET */}
+                      <div className="space-y-1">
                         <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
-                          Sélectionnez votre hébergement
+                          Nom Complet du Client
                         </label>
-                        <div className="space-y-1.5">
-                          {[
-                            { id: "executive", name: "Chambre Executive", price: 25000, desc: "Lit King size, vue jardin, wifi haut débit" },
-                            { id: "suite", name: "Suite Executive Vue Mer", price: 45000, desc: "Balcon privé face mer, salon spacieux" },
-                            { id: "royale", name: "Suite Royale Maison Rouge", price: 75000, desc: "Jacuzzi privé, majordome, vue panoramique" }
-                          ].map((room) => {
-                            const isSelected = formData.roomType === room.id;
-                            return (
-                              <button
-                                key={room.id}
-                                type="button"
-                                onClick={() => setFormData({ ...formData, roomType: room.id })}
-                                className={`w-full p-2.5 rounded-xl border text-left transition-all flex justify-between items-center cursor-pointer ${
-                                  isSelected 
-                                    ? "border-elite-gold bg-elite-gold/5 shadow-[0_0_15px_rgba(202,138,4,0.05)]"
-                                    : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
-                                }`}
-                              >
-                                <div>
-                                  <span className={`text-[10px] font-bold block ${isSelected ? "text-elite-gold" : "text-white"}`}>
-                                    {room.name}
-                                  </span>
-                                  <span className="text-[8px] text-stone-400 block font-light leading-none mt-0.5">{room.desc}</span>
-                                </div>
-                                <span className="text-[10px] font-bold text-elite-gold font-mono whitespace-nowrap ml-2">
-                                  {room.price / 1000}k FCFA
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
+                        <input
+                          type="text"
+                          required
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-elite-gold transition-colors text-white"
+                          placeholder="Ex: M. Jean Dupont"
+                        />
                       </div>
 
-                      {/* ARRIVÉE / DÉPART */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
-                            Arrivée
-                          </label>
-                          <input
-                            type="date"
-                            required
-                            value={formData.checkIn}
-                            onChange={(e) => setFormData({ ...formData, checkIn: e.target.value })}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-elite-gold text-white font-mono"
-                          />
+                      {/* DATE PICKERS */}
+                      {bookingType === "room" ? (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                              Arrivée
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="date"
+                                required
+                                value={formData.checkIn}
+                                onChange={(e) => setFormData({ ...formData, checkIn: e.target.value })}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-elite-gold text-white font-mono"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                              Départ
+                            </label>
+                            <input
+                              type="date"
+                              required
+                              value={formData.checkOut}
+                              onChange={(e) => setFormData({ ...formData, checkOut: e.target.value })}
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-elite-gold text-white font-mono"
+                            />
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
-                            Départ
-                          </label>
-                          <input
-                            type="date"
-                            required
-                            value={formData.checkOut}
-                            onChange={(e) => setFormData({ ...formData, checkOut: e.target.value })}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-elite-gold text-white font-mono"
-                          />
-                        </div>
-                      </div>
-
-                      {/* STAY SUMMARY */}
-                      <div className="p-3 bg-white/5 border border-white/10 rounded-xl flex justify-between items-center text-xs font-mono">
-                        <div className="text-stone-400 text-[10px]">
-                          Séjour de {roomNights} {roomNights > 1 ? "nuits" : "nuit"}
-                        </div>
-                        <div className="text-right">
-                          <span className="text-stone-400 text-[10px] block line-through">Total: {formatFCFA(roomTotal)}</span>
-                          <span className="text-emerald-400 font-bold block">Acompte requis: {formatFCFA(roomDeposit)}</span>
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {/* TABLE FIELDS */}
-                  {bookingType === "table" && (
-                    <>
-                      {/* COUVERTS & DATE/TIME */}
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
-                            Couverts
-                          </label>
-                          <select
-                            value={formData.guests}
-                            onChange={(e) => setFormData({ ...formData, guests: Number(e.target.value) })}
-                            className="w-full bg-stone-900 border border-white/10 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-elite-gold text-white"
-                          >
-                            {[1, 2, 3, 4, 5, 6].map((num) => (
-                              <option key={num} value={num}>
-                                {num} {num > 1 ? "pers." : "pers."}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-1 col-span-2">
-                          <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
-                            Date & Heure
-                          </label>
-                          <div className="flex gap-1.5">
+                      ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                              Date de visite
+                            </label>
                             <input
                               type="date"
                               required
                               value={formData.tableDate}
                               onChange={(e) => setFormData({ ...formData, tableDate: e.target.value })}
-                              className="w-[60%] bg-white/5 border border-white/10 rounded-xl px-2 py-2 text-[10px] focus:outline-none focus:border-elite-gold text-white font-mono"
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-elite-gold text-white font-mono"
                             />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                              Heure
+                            </label>
                             <input
                               type="time"
                               required
                               value={formData.time}
                               onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                              className="w-[40%] bg-white/5 border border-white/10 rounded-xl px-2 py-2 text-[10px] focus:outline-none focus:border-elite-gold text-white font-mono"
+                              className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-elite-gold text-white font-mono"
                             />
                           </div>
                         </div>
-                      </div>
+                      )}
 
-                      {/* TABLE LOCATION RADIOS */}
-                      <div className="space-y-2">
+                      {/* GUESTS SELECTOR */}
+                      <div className="space-y-1">
                         <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
-                          Choix de la table
+                          Nombre de voyageurs / couverts
                         </label>
-                        <div className="space-y-1.5">
-                          {[
-                            { id: "terrasse", name: "Côté Mer (Terrasse)", price: "Gratuit", desc: "Brise marine, vue directe sur l'océan" },
-                            { id: "climatisee", name: "Salle Climatisée", price: "Gratuit", desc: "Cadre feutré, calme et rafraîchissant" },
-                            { id: "vip", name: "Salon VIP (Acompte requis)", price: "10 000 FCFA", desc: "Intimité absolue, service exclusif dédié" }
-                          ].map((loc) => {
-                            const isSelected = formData.tableLocation === loc.id;
-                            return (
+                        <select
+                          value={formData.guests}
+                          onChange={(e) => setFormData({ ...formData, guests: Number(e.target.value) })}
+                          className="w-full bg-stone-900 border border-white/10 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-elite-gold text-white"
+                        >
+                          {[1, 2, 3, 4, 5, 6].map((num) => (
+                            <option key={num} value={num}>
+                              {num} {num > 1 ? "Personnes" : "Personne"}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* STEP 2: ROOM SELECTION / TABLE SELECTION */}
+                  {bookingStep === "rooms" && (
+                    <div className="space-y-3 animate-fade-in">
+                      {bookingType === "room" ? (
+                        <>
+                          <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold mb-1">
+                            Sélectionnez votre Hébergement
+                          </label>
+                          <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                            {[
+                              { id: "executive", name: "Chambre Executive Cosy", price: 25000, desc: "28m², vue jardin arboré, lit Queen Size", icon: "🛌" },
+                              { id: "suite", name: "Suite Executive Vue Mer", price: 45000, desc: "45m², terrasse privée face mer, salon", icon: "🌊" },
+                              { id: "royale", name: "Suite Royale Maison Rouge", price: 75000, desc: "85m², jacuzzi privatif, salon d'affaires", icon: "👑" }
+                            ].map((r) => {
+                              const isSelected = formData.roomType === r.id;
+                              return (
+                                <button
+                                  type="button"
+                                  key={r.id}
+                                  onClick={() => setFormData({ ...formData, roomType: r.id })}
+                                  className={`w-full p-2.5 rounded-xl border text-left flex justify-between items-center transition-all cursor-pointer ${
+                                    isSelected 
+                                      ? "border-elite-gold bg-elite-gold/5 shadow-[0_0_12px_rgba(202,138,4,0.08)]"
+                                      : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
+                                  }`}
+                                >
+                                  <div className="flex gap-2.5 items-center">
+                                    <span className="text-xl">{r.icon}</span>
+                                    <div>
+                                      <span className={`text-[10px] font-bold block ${isSelected ? "text-elite-gold" : "text-white"}`}>
+                                        {r.name}
+                                      </span>
+                                      <span className="text-[8px] text-stone-400 block font-light leading-none mt-0.5">{r.desc}</span>
+                                    </div>
+                                  </div>
+                                  <span className="text-[10px] font-bold text-elite-gold font-mono ml-2">
+                                    {r.price / 1000}k F/nuit
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* RATE PLANS - PROFESSIONAL SYSTEM */}
+                          <div className="space-y-2 mt-2">
+                            <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                              Tarification
+                            </label>
+                            <div className="grid grid-cols-2 gap-3">
                               <button
-                                key={loc.id}
                                 type="button"
-                                onClick={() => {
-                                  setFormData({ ...formData, tableLocation: loc.id });
-                                  if (loc.id === "vip") {
-                                    setRequireDeposit(true);
-                                  }
-                                }}
-                                className={`w-full p-2.5 rounded-xl border text-left transition-all flex justify-between items-center cursor-pointer ${
-                                  isSelected 
-                                    ? "border-elite-gold bg-elite-gold/5 shadow-[0_0_15px_rgba(202,138,4,0.05)]"
-                                    : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
+                                onClick={() => setFormData({ ...formData, ratePlan: "refundable" })}
+                                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                                  formData.ratePlan === "refundable"
+                                    ? "border-white/20 bg-white/5"
+                                    : "border-white/5 bg-transparent opacity-65 hover:opacity-100"
                                 }`}
                               >
-                                <div>
-                                  <span className={`text-[10px] font-bold block ${isSelected ? "text-elite-gold" : "text-white"}`}>
-                                    {loc.name}
-                                  </span>
-                                  <span className="text-[8px] text-stone-400 block font-light leading-none mt-0.5">{loc.desc}</span>
-                                </div>
-                                <span className="text-[10px] font-bold text-elite-gold font-mono whitespace-nowrap ml-2">
-                                  {loc.price}
-                                </span>
+                                <span className="text-[10px] font-bold block text-white">Tarif Flexible</span>
+                                <span className="text-[8px] text-emerald-400 block mt-0.5">Annulation gratuite</span>
                               </button>
-                            );
-                          })}
-                        </div>
+                              
+                              <button
+                                type="button"
+                                onClick={() => setFormData({ ...formData, ratePlan: "non_refundable" })}
+                                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                                  formData.ratePlan === "non_refundable"
+                                    ? "border-elite-gold bg-elite-gold/5"
+                                    : "border-white/5 bg-transparent opacity-65 hover:opacity-100"
+                                }`}
+                              >
+                                <span className="text-[10px] font-bold block text-elite-gold">Tarif Non-Remb.</span>
+                                <span className="text-[8px] text-stone-300 block mt-0.5">Économisez -10% direct</span>
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold mb-1">
+                            Emplacement de votre table
+                          </label>
+                          <div className="space-y-2">
+                            {[
+                              { id: "terrasse", name: "Côté Mer (Terrasse)", price: "Gratuit", desc: "Brise marine, vue panoramique" },
+                              { id: "climatisee", name: "Salle Intérieure Climatisée", price: "Gratuit", desc: "Cadre feutré, calme et climatisé" },
+                              { id: "vip", name: "Salon VIP (Acompte requis)", price: "10 000 FCFA", desc: "Service discret exclusif, table privative" }
+                            ].map((loc) => {
+                              const isSelected = formData.tableLocation === loc.id;
+                              return (
+                                <button
+                                  key={loc.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData({ ...formData, tableLocation: loc.id });
+                                    if (loc.id === "vip") {
+                                      setRequireDeposit(true);
+                                    }
+                                  }}
+                                  className={`w-full p-2.5 rounded-xl border text-left transition-all flex justify-between items-center cursor-pointer ${
+                                    isSelected 
+                                      ? "border-elite-gold bg-elite-gold/5 shadow-[0_0_12px_rgba(202,138,4,0.08)]"
+                                      : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
+                                  }`}
+                                >
+                                  <div>
+                                    <span className={`text-[10px] font-bold block ${isSelected ? "text-elite-gold" : "text-white"}`}>
+                                      {loc.name}
+                                    </span>
+                                    <span className="text-[8px] text-stone-400 block font-light leading-none mt-0.5">{loc.desc}</span>
+                                  </div>
+                                  <span className="text-[10px] font-bold text-elite-gold font-mono ml-2">
+                                    {loc.price}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* STEP 3: EXTRAS / UPSELLS */}
+                  {bookingStep === "extras" && (
+                    <div className="space-y-3 animate-fade-in">
+                      <div className="mb-2">
+                        <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                          Services VIP (Surclassement)
+                        </label>
+                        <p className="text-[8px] text-stone-450 italic mt-0.5">Augmentez le panier moyen avec les services de l'hôtel.</p>
                       </div>
 
-                      {/* DEPOSIT OPTION (IF NOT VIP) */}
-                      {formData.tableLocation !== "vip" && (
-                        <div className="space-y-2">
-                          <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
-                            Option de Paiement
-                          </label>
-                          <div className="grid grid-cols-2 gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setRequireDeposit(false)}
-                              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                                !requireDeposit
-                                  ? "border-white/20 bg-white/5"
-                                  : "border-white/5 bg-transparent opacity-60 hover:opacity-100"
-                              }`}
-                            >
-                              <span className="text-[10px] font-bold block text-white">Réservation simple</span>
-                              <span className="text-[8px] text-stone-400 block mt-0.5">Zéro acompte requis</span>
-                            </button>
-                            
-                            <button
-                              type="button"
-                              onClick={() => setRequireDeposit(true)}
-                              className={`p-2.5 rounded-xl border text-left transition-all relative overflow-hidden cursor-pointer ${
-                                requireDeposit
-                                  ? "border-elite-gold bg-elite-gold/5 shadow-[0_0_15px_rgba(202,138,4,0.05)]"
-                                  : "border-white/5 bg-transparent opacity-60 hover:opacity-100"
-                              }`}
-                            >
-                              <span className="text-[10px] font-bold block text-elite-gold">Avec Acompte</span>
-                              <span className="text-[8px] text-stone-300 block mt-0.5">Garantie (5 000 FCFA)</span>
-                            </button>
+                      <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                        {/* Airport shuttle */}
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, shuttle: !formData.shuttle })}
+                          className={`w-full p-2.5 rounded-xl border text-left flex justify-between items-center transition-all cursor-pointer ${
+                            formData.shuttle ? "border-emerald-500/50 bg-emerald-500/[0.02]" : "border-white/5 bg-white/[0.02]"
+                          }`}
+                        >
+                          <div>
+                            <span className="text-[10px] font-bold block text-white flex items-center gap-1.5">
+                              {formData.shuttle && <span className="text-emerald-500 text-xs">✓</span>}
+                              🚖 Navette Aéroport
+                            </span>
+                            <span className="text-[8px] text-stone-400 block mt-0.5">Chauffeur privé A/R (Cadjehoun)</span>
                           </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
+                          <span className="text-[10px] font-bold text-elite-gold font-mono whitespace-nowrap ml-2">
+                            +10 000 F
+                          </span>
+                        </button>
 
-              <button
-                type="submit"
-                className="w-full bg-elite-gold hover:bg-elite-gold-light text-black py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer mt-6 shadow-lg shadow-elite-gold/15"
-              >
-                {bookingType === "room" || depositRequired > 0 ? "Procéder à l'acompte" : "Confirmer ma réservation"}
-              </button>
-            </form>
-          )}
-
-          {stage === "payment" && (
-            <form onSubmit={handlePaymentSubmit} className="space-y-4 flex-grow flex flex-col justify-between animate-fade-in">
-              <div className="space-y-4">
-                <div className="text-center pb-2 border-b border-white/5">
-                  <span className="text-[10px] uppercase tracking-wider text-amber-500 font-bold block">
-                    Passerelle de Paiement (Simulé FedaPay)
-                  </span>
-                </div>
-
-                <div className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-2 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="text-stone-400">Établissement</span>
-                    <span className="font-bold text-white">Hôtel Maison Rouge</span>
-                  </div>
-                  <div className="flex justify-between items-center border-t border-white/5 pt-2">
-                    <span className="text-stone-400">
-                      {bookingType === "room" ? "Réservation de Chambre" : "Réservation de Table"}
-                    </span>
-                    <span className="text-stone-300">
-                      {bookingType === "room" ? (
-                        <>
-                          {formData.roomType === "executive" && "Chambre Exec."}
-                          {formData.roomType === "suite" && "Suite Exec."}
-                          {formData.roomType === "royale" && "Suite Royale"} ({roomNights} nuits)
-                        </>
-                      ) : (
-                        <>Table: {formData.tableLocation.toUpperCase()}</>
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center border-t border-white/5 pt-2">
-                    <span className="text-stone-400">Acompte requis</span>
-                    <span className="font-bold text-elite-gold font-mono">{formatFCFA(depositRequired)}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
-                    Mode de Paiement
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setMomoOperator("mtn")}
-                      className={`py-2.5 rounded-xl text-[10px] font-bold uppercase border transition-all cursor-pointer ${
-                        momoOperator === "mtn"
-                          ? "bg-amber-500/20 border-amber-500 text-amber-300"
-                          : "bg-white/5 border-white/10 text-stone-400 hover:text-white"
-                      }`}
-                    >
-                      MTN MoMo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setMomoOperator("moov")}
-                      className={`py-2.5 rounded-xl text-[10px] font-bold uppercase border transition-all cursor-pointer ${
-                        momoOperator === "moov"
-                          ? "bg-blue-500/20 border-blue-500 text-blue-300"
-                          : "bg-white/5 border-white/10 text-stone-400 hover:text-white"
-                      }`}
-                    >
-                      Moov Flooz
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
-                    Numéro de téléphone
-                  </label>
-                  <div className="flex gap-2">
-                    <span className="bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-xs text-stone-300 font-mono flex items-center">
-                      +229
-                    </span>
-                    <input
-                      type="tel"
-                      required
-                      pattern="[0-9]{8,10}"
-                      value={momoNumber}
-                      onChange={(e) => setMomoNumber(e.target.value)}
-                      className="flex-grow bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-elite-gold text-white font-mono"
-                      placeholder="Ex: 01 67 75 00 83"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-emerald-500/20 mt-6"
-              >
-                Payer {formatFCFA(depositRequired)}
-              </button>
-            </form>
-          )}
-
-          {stage === "paying" && (
-            <div className="flex-grow flex flex-col items-center justify-center text-center space-y-4 animate-fade-in">
-              <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center animate-pulse text-emerald-400">
-                <MessageCircle size={28} />
-              </div>
-              <div className="space-y-2">
-                <h4 className="text-sm font-bold text-white">Demande de débit envoyée !</h4>
-                <p className="text-stone-400 text-[10px] leading-relaxed max-w-xs mx-auto">
-                  Un pop-up de validation USSD a été poussé sur le numéro{" "}
-                  <strong className="font-mono text-white">+229 {momoNumber}</strong>.
-                  <br />
-                  Saisissez votre code PIN {momoOperator.toUpperCase()} sur votre mobile pour valider l'acompte de{" "}
-                  <strong className="text-elite-gold">{formatFCFA(depositRequired)}</strong>.
-                </p>
-              </div>
-              <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mt-4" />
-            </div>
-          )}
-
-          {stage === "sent" && (
-            <div className="flex-grow flex flex-col items-center justify-center text-center space-y-4 animate-fade-in">
-              <div className="w-12 h-12 border-2 border-elite-gold border-t-transparent rounded-full animate-spin" />
-              <div>
-                <h4 className="text-sm font-bold text-white">Traitement de la réservation...</h4>
-                <p className="text-stone-500 text-[10px] mt-1">
-                  Création du ticket de séjour et envoi des webhooks Telegram & WhatsApp
-                </p>
-              </div>
-            </div>
-          )}
-
-          {stage === "reception" && (
-            <div className="flex-grow flex flex-col justify-between space-y-6 animate-fade-in">
-              <div className="space-y-4 flex-grow overflow-y-auto max-h-[360px] pr-1">
-                <div className="text-center pb-2 border-b border-white/5 mb-3">
-                  <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-bold block animate-pulse">
-                    🟢 DÉPLOIEMENT ACTIVÉ (TEMPS RÉEL)
-                  </span>
-                </div>
-
-                {/* Simulated Telegram Notification (Reception Alert) */}
-                <div className="p-3.5 bg-slate-900 border border-blue-500/30 rounded-2xl space-y-2 text-left shadow-lg">
-                  <div className="flex justify-between items-center text-[9px] font-bold text-blue-400">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500 flex items-center justify-center text-[7px] text-white font-mono">T</span>
-                      <span>TELEGRAM RÉCEPTION (MAISON ROUGE)</span>
-                    </div>
-                    <span className="font-mono text-stone-500">A l'instant</span>
-                  </div>
-                  <div className="text-[11px] text-stone-200 leading-relaxed font-mono">
-                    🚨 <strong>NOUVEAU DOSSIER :</strong>
-                    <div className="pl-3 mt-1 border-l border-blue-500/20 text-stone-300 space-y-0.5">
-                      <div>• Client: {formData.name}</div>
-                      {bookingType === "room" ? (
-                        <>
-                          <div>• Type: Hébergement ({formData.roomType.toUpperCase()})</div>
-                          <div>• Dates: du {formData.checkIn} au {formData.checkOut} ({roomNights} nuits)</div>
-                          <div>• Voyageurs: {formData.roomGuests} personnes</div>
-                          <div>• Montant total: {formatFCFA(roomTotal)}</div>
-                          <div className="text-emerald-400 font-bold">
-                            • Acompte validé: {formatFCFA(roomDeposit)} ({momoOperator.toUpperCase()} MoMo) 🟢
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div>• Type: Table Restaurant</div>
-                          <div>• Couverts: {formData.guests} couverts</div>
-                          <div>• Date & Heure: le {formData.tableDate} à {formData.time}</div>
-                          <div>• Emplacement: {formData.tableLocation.toUpperCase()}</div>
-                          {depositRequired > 0 ? (
-                            <div className="text-emerald-400 font-bold">
-                              • Acompte validé: {formatFCFA(tableDeposit)} ({momoOperator.toUpperCase()} MoMo) 🟢
+                        {/* Buffet Breakfast */}
+                        {bookingType === "room" && (
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, breakfast: !formData.breakfast })}
+                            className={`w-full p-2.5 rounded-xl border text-left flex justify-between items-center transition-all cursor-pointer ${
+                              formData.breakfast ? "border-emerald-500/50 bg-emerald-500/[0.02]" : "border-white/5 bg-white/[0.02]"
+                            }`}
+                          >
+                            <div>
+                              <span className="text-[10px] font-bold block text-white flex items-center gap-1.5">
+                                {formData.breakfast && <span className="text-emerald-500 text-xs">✓</span>}
+                                🥐 Petit-déjeuner Royal
+                              </span>
+                              <span className="text-[8px] text-stone-400 block mt-0.5">Buffet gourmet complet / jour / pers.</span>
                             </div>
-                          ) : (
-                            <div className="text-amber-500 font-bold">
-                              • Statut acompte: Aucun (Règlement sur place) ⚠️
+                            <span className="text-[10px] font-bold text-elite-gold font-mono whitespace-nowrap ml-2">
+                              +7.5k F/j
+                            </span>
+                          </button>
+                        )}
+
+                        {/* Luxury Spa */}
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, spa: !formData.spa })}
+                          className={`w-full p-2.5 rounded-xl border text-left flex justify-between items-center transition-all cursor-pointer ${
+                            formData.spa ? "border-emerald-500/50 bg-emerald-500/[0.02]" : "border-white/5 bg-white/[0.02]"
+                          }`}
+                        >
+                          <div>
+                            <span className="text-[10px] font-bold block text-white flex items-center gap-1.5">
+                              {formData.spa && <span className="text-emerald-500 text-xs">✓</span>}
+                              💆 Massage & Spa Vue Mer
+                            </span>
+                            <span className="text-[8px] text-stone-400 block mt-0.5">Session d'une heure de relaxation</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-elite-gold font-mono whitespace-nowrap ml-2">
+                            +25 000 F
+                          </span>
+                        </button>
+
+                        {/* Welcome Champagne */}
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, champagne: !formData.champagne })}
+                          className={`w-full p-2.5 rounded-xl border text-left flex justify-between items-center transition-all cursor-pointer ${
+                            formData.champagne ? "border-emerald-500/50 bg-emerald-500/[0.02]" : "border-white/5 bg-white/[0.02]"
+                          }`}
+                        >
+                          <div>
+                            <span className="text-[10px] font-bold block text-white flex items-center gap-1.5">
+                              {formData.champagne && <span className="text-emerald-500 text-xs">✓</span>}
+                              🍾 Champagne de Bienvenue
+                            </span>
+                            <span className="text-[8px] text-stone-400 block mt-0.5">Une bouteille fraîche à votre arrivée</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-elite-gold font-mono whitespace-nowrap ml-2">
+                            +40 000 F
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* STEP 4: CHECKOUT / BILL BREAKDOWN */}
+                  {bookingStep === "checkout" && (
+                    <div className="space-y-3 animate-fade-in">
+                      <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                        Facturation Détaillée (Normes Bénin)
+                      </label>
+                      
+                      <div className="p-3 bg-white/5 border border-white/10 rounded-xl space-y-1.5 text-[10px] font-mono">
+                        {/* Room item */}
+                        {bookingType === "room" ? (
+                          <>
+                            <div className="flex justify-between">
+                              <span className="text-stone-400">
+                                {formData.roomType === "executive" ? "Chambre Executive" : formData.roomType === "suite" ? "Suite Executive" : "Suite Royale"} ({nights} nuits)
+                              </span>
+                              <span className="text-white">{formatFCFA(roomSubtotal)}</span>
+                            </div>
+                            {formData.ratePlan === "non_refundable" && (
+                              <div className="flex justify-between text-amber-500 text-[9px]">
+                                <span>↳ Remise tarif non-remboursable</span>
+                                <span>Inclus</span>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="flex justify-between">
+                            <span className="text-stone-400">Réservation de table ({formData.tableLocation.toUpperCase()})</span>
+                            <span className="text-white">Gratuit</span>
+                          </div>
+                        )}
+
+                        {/* Extras list */}
+                        {extrasSubtotal > 0 && (
+                          <div className="border-t border-white/5 pt-1.5 space-y-1">
+                            <span className="text-[8px] text-stone-550 block font-sans">Options additionnelles :</span>
+                            {formData.shuttle && (
+                              <div className="flex justify-between text-[9px] text-stone-300">
+                                <span>• Navette Aéroport Cadjehoun</span>
+                                <span>{formatFCFA(10000)}</span>
+                              </div>
+                            )}
+                            {formData.breakfast && bookingType === "room" && (
+                              <div className="flex justify-between text-[9px] text-stone-300">
+                                <span>• Petit-déjeuner royal</span>
+                                <span>{formatFCFA(breakfastCost)}</span>
+                              </div>
+                            )}
+                            {formData.spa && (
+                              <div className="flex justify-between text-[9px] text-stone-300">
+                                <span>• Massage & Spa</span>
+                                <span>{formatFCFA(25000)}</span>
+                              </div>
+                            )}
+                            {formData.champagne && (
+                              <div className="flex justify-between text-[9px] text-stone-300">
+                                <span>• Bouteille Champagne VIP</span>
+                                <span>{formatFCFA(40000)}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Taxes */}
+                        <div className="border-t border-white/5 pt-1.5 space-y-1">
+                          {bookingType === "room" && (
+                            <div className="flex justify-between text-[9px] text-stone-400">
+                              <span>Taxe de séjour touristique</span>
+                              <span>{formatFCFA(touristTax)}</span>
                             </div>
                           )}
-                        </>
-                      )}
+                          <div className="flex justify-between text-[9px] text-stone-400">
+                            <span>TVA Locale (18%)</span>
+                            <span>{formatFCFA(vatAmount)}</span>
+                          </div>
+                        </div>
+
+                        {/* Grand Total */}
+                        <div className="border-t border-white/10 pt-2 flex justify-between text-xs font-bold">
+                          <span className="text-white uppercase">Montant Total Séjour</span>
+                          <span className="text-white font-mono">{formatFCFA(grandTotal)}</span>
+                        </div>
+
+                        {/* Deposit Required */}
+                        <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-lg flex justify-between items-center text-[10px] font-sans mt-2">
+                          <div>
+                            <span className="font-bold text-emerald-400 block">Acompte de Garantie</span>
+                            <span className="text-[8px] text-stone-400 block">Requis en ligne pour valider</span>
+                          </div>
+                          <span className="font-bold font-mono text-emerald-400 text-xs">{formatFCFA(depositRequired)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-elite-gold hover:bg-elite-gold-light text-black py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer mt-6 shadow-lg shadow-elite-gold/15"
+                >
+                  {bookingStep === "checkout" ? "Payer l'acompte" : "Continuer"}
+                </button>
+              </form>
+            )}
+
+            {stage === "payment" && (
+              <form onSubmit={handlePaymentSubmit} className="space-y-4 flex-grow flex flex-col justify-between animate-fade-in">
+                <div className="space-y-4">
+                  <div className="text-center pb-2 border-b border-white/5">
+                    <span className="text-[10px] uppercase tracking-wider text-amber-500 font-bold block">
+                      Passerelle de Paiement (Simulé FedaPay)
+                    </span>
+                  </div>
+
+                  <div className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="text-stone-400">Établissement</span>
+                      <span className="font-bold text-white">Hôtel Maison Rouge</span>
+                    </div>
+                    <div className="flex justify-between items-center border-t border-white/5 pt-2 font-mono">
+                      <span className="text-stone-400">Garantie Requise</span>
+                      <span className="font-bold text-elite-gold">{formatFCFA(depositRequired)}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                      Mode de Paiement
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setMomoOperator("mtn")}
+                        className={`py-2.5 rounded-xl text-[10px] font-bold uppercase border transition-all cursor-pointer ${
+                          momoOperator === "mtn"
+                            ? "bg-amber-500/20 border-amber-500 text-amber-300"
+                            : "bg-white/5 border-white/10 text-stone-400 hover:text-white"
+                        }`}
+                      >
+                        MTN MoMo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMomoOperator("moov")}
+                        className={`py-2.5 rounded-xl text-[10px] font-bold uppercase border transition-all cursor-pointer ${
+                          momoOperator === "moov"
+                            ? "bg-blue-500/20 border-blue-500 text-blue-300"
+                            : "bg-white/5 border-white/10 text-stone-400 hover:text-white"
+                        }`}
+                      >
+                        Moov Flooz
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] uppercase tracking-wider text-stone-400 block font-bold">
+                      Numéro de téléphone Bénin
+                    </label>
+                    <div className="flex gap-2">
+                      <span className="bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-xs text-stone-300 font-mono flex items-center">
+                        +229
+                      </span>
+                      <input
+                        type="tel"
+                        required
+                        pattern="[0-9]{8,10}"
+                        value={momoNumber}
+                        onChange={(e) => setMomoNumber(e.target.value)}
+                        className="flex-grow bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-elite-gold text-white font-mono"
+                        placeholder="Ex: 01 67 75 00 83"
+                      />
                     </div>
                   </div>
                 </div>
 
-                {/* Simulated WhatsApp Chat Bubble (Client Ticket) */}
-                <div className="p-4 bg-[#005c4b] border border-emerald-500/30 rounded-2xl space-y-1.5 text-left shadow-lg max-w-[90%] ml-auto relative">
-                  <div className="absolute top-0 right-0 -mr-1.5 w-3 h-3 bg-[#005c4b] rotate-45 border-r border-t border-emerald-500/30" />
-                  
-                  <div className="flex justify-between items-center text-[8px] text-emerald-300 font-bold">
-                    <span>Maison Rouge Cotonou (Officiel)</span>
-                    <span className="text-[7px] font-normal text-emerald-400">✓✓</span>
-                  </div>
-                  
-                  {bookingType === "room" ? (
-                    <p className="text-[11px] text-white leading-relaxed">
-                      Bonjour {formData.name}, votre réservation pour la <strong>{formData.roomType === "executive" ? "Chambre Executive" : formData.roomType === "suite" ? "Suite Executive Vue Mer" : "Suite Royale Maison Rouge"}</strong> du {formData.checkIn} au {formData.checkOut} ({roomNights} nuits) est confirmée. <br />
-                      💵 <strong>Acompte reçu :</strong> {formatFCFA(roomDeposit)} ({momoOperator.toUpperCase()} MoMo). <br />
-                      🔑 Votre chambre sera prête dès 14h. Bienvenue à la Maison Rouge !
-                    </p>
-                  ) : (
-                    <p className="text-[11px] text-white leading-relaxed">
-                      Bonjour {formData.name}, votre table de {formData.guests} personnes (emplacement: {formData.tableLocation === "terrasse" ? "Côté Mer (Terrasse)" : formData.tableLocation === "climatisee" ? "Salle Climatisée" : "Salon VIP"}) est bien réservée pour le {formData.tableDate} à {formData.time}. <br />
-                      {depositRequired > 0 ? (
-                        <>💵 <strong>Acompte de garantie validé :</strong> {formatFCFA(tableDeposit)}. Solde à régler sur place. Merci !</>
-                      ) : (
-                        <>🍷 Aucun acompte requis. Règlement sur place. À très bientôt !</>
-                      )}
-                    </p>
-                  )}
-                  <div className="text-right text-[7px] text-emerald-400/80 font-mono">
-                    A l'instant
-                  </div>
+                <button
+                  type="submit"
+                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-emerald-500/20 mt-6"
+                >
+                  Valider l'acompte
+                </button>
+              </form>
+            )}
+
+            {stage === "paying" && (
+              <div className="flex-grow flex flex-col items-center justify-center text-center space-y-4 animate-fade-in">
+                <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center animate-pulse text-emerald-400">
+                  <CreditCard size={28} />
+                </div>
+                <div className="space-y-2">
+                  <h4 className="text-sm font-bold text-white">Demande USSD envoyée !</h4>
+                  <p className="text-stone-400 text-[10px] leading-relaxed max-w-xs mx-auto">
+                    Un pop-up de validation a été envoyé sur le numéro{" "}
+                    <strong className="font-mono text-white">+229 {momoNumber}</strong>.
+                    <br />
+                    Saisissez votre code PIN {momoOperator.toUpperCase()} sur votre mobile pour valider l'acompte de{" "}
+                    <strong className="text-elite-gold">{formatFCFA(depositRequired)}</strong>.
+                  </p>
+                </div>
+                <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mt-4" />
+              </div>
+            )}
+
+            {stage === "sent" && (
+              <div className="flex-grow flex flex-col items-center justify-center text-center space-y-4 animate-fade-in">
+                <div className="w-12 h-12 border-2 border-elite-gold border-t-transparent rounded-full animate-spin" />
+                <div>
+                  <h4 className="text-sm font-bold text-white">Synchronisation de la chambre...</h4>
+                  <p className="text-stone-500 text-[10px] mt-1 font-mono">
+                    WEBHOOK: Dispatching details to Telegram, WhatsApp & PMS Dashboard
+                  </p>
                 </div>
               </div>
+            )}
 
-              <button
-                onClick={resetSandbox}
-                className="w-full border border-white/10 hover:border-white/20 text-stone-400 hover:text-white py-3.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer hover:bg-white/[0.02]"
-              >
-                Simuler une nouvelle réservation
-              </button>
-            </div>
-          )}
+            {stage === "reception" && (
+              <div className="flex-grow flex flex-col justify-between space-y-4 animate-fade-in">
+                
+                {/* SUCCESS VIEW TAB SELECTOR */}
+                <div className="flex bg-white/5 p-0.5 rounded-lg border border-white/10 text-[9px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSuccessView("client");
+                      setPreRegisterStage("none");
+                    }}
+                    className={`flex-grow py-1.5 rounded-md transition-all cursor-pointer ${
+                      successView === "client" ? "bg-elite-gold text-black" : "text-stone-400 hover:text-white"
+                    }`}
+                  >
+                    📱 Vue Client (WhatsApp)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSuccessView("pms")}
+                    className={`flex-grow py-1.5 rounded-md transition-all cursor-pointer ${
+                      successView === "pms" ? "bg-elite-gold text-black" : "text-stone-400 hover:text-white"
+                    }`}
+                  >
+                    💻 PMS Réception (Dashboard)
+                  </button>
+                </div>
+
+                {/* VIEW 1: CLIENT WHATSAPP PRE-CHECKIN EXPERIENCE */}
+                {successView === "client" && (
+                  <div className="space-y-4 flex-grow flex flex-col justify-between">
+                    
+                    {preRegisterStage === "none" && (
+                      <div className="space-y-3 flex-grow overflow-y-auto max-h-[300px]">
+                        {/* WhatsApp bubble */}
+                        <div className="p-4 bg-[#005c4b] border border-emerald-500/30 rounded-2xl space-y-2.5 text-left shadow-lg max-w-[95%] ml-auto relative">
+                          <div className="absolute top-0 right-0 -mr-1.5 w-3 h-3 bg-[#005c4b] rotate-45 border-r border-t border-emerald-500/30" />
+                          
+                          <div className="flex justify-between items-center text-[8px] text-emerald-300 font-bold">
+                            <span>Maison Rouge Cotonou (Officiel)</span>
+                            <span className="text-[7px] font-normal text-emerald-400">✓✓</span>
+                          </div>
+                          
+                          {bookingType === "room" ? (
+                            <div className="space-y-2">
+                              <p className="text-[11px] text-white leading-relaxed">
+                                Bonjour <strong>{formData.name}</strong>, votre réservation pour la <strong>{formData.roomType === "executive" ? "Chambre Executive" : formData.roomType === "suite" ? "Suite Executive Vue Mer" : "Suite Royale"}</strong> ({nights} nuits) est validée. <br />
+                                💵 <strong>Acompte reçu :</strong> {formatFCFA(roomDeposit)} via Mobile Money ({momoOperator.toUpperCase()}).
+                              </p>
+                              <div className="p-2.5 bg-black/20 rounded-xl border border-white/5 space-y-1 text-[9px] text-stone-250 font-mono">
+                                <div>• Arrivée: {formData.checkIn} (14h00)</div>
+                                <div>• Départ: {formData.checkOut} (12h00)</div>
+                                <div>• Extras: {formData.shuttle ? "Navette aéroport" : ""} {formData.breakfast ? "Petit-dej" : ""} {formData.spa ? "Spa" : ""} {formData.champagne ? "Champagne" : ""}</div>
+                              </div>
+                              <p className="text-[10px] text-stone-200">
+                                Pour gagner du temps à l'arrivée et ne pas faire la queue, faites votre pré-enregistrement en ligne :
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-[11px] text-white leading-relaxed">
+                              Bonjour <strong>{formData.name}</strong>, votre table ({formData.tableLocation.toUpperCase()}) est bien réservée le {formData.tableDate} à {formData.time}. <br />
+                              💵 Acompte validé : {formatFCFA(tableDeposit)}. À très bientôt !
+                            </p>
+                          )}
+                          <div className="text-right text-[7px] text-emerald-400/80 font-mono">
+                            A l'instant
+                          </div>
+                        </div>
+
+                        {/* Premium check-in button in WhatsApp */}
+                        {bookingType === "room" && (
+                          <button
+                            type="button"
+                            onClick={() => setPreRegisterStage("start")}
+                            className="w-full bg-elite-gold hover:bg-elite-gold-light text-black py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
+                          >
+                            <Sparkles size={12} />
+                            Faire mon Pré-enregistrement
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Pre-registration flow screen */}
+                    {preRegisterStage !== "none" && (
+                      <div className="p-4 bg-stone-900 border border-white/10 rounded-2xl text-left space-y-3 animate-fade-in flex-grow flex flex-col justify-between">
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider text-elite-gold font-bold block mb-1">Portail Client Maison Rouge</span>
+                          <h4 className="text-xs font-bold text-white mb-2">Check-in Express en Ligne</h4>
+                          
+                          {preRegisterStage === "start" && (
+                            <div className="space-y-3">
+                              <p className="text-[9px] text-stone-400 leading-relaxed">
+                                Merci de scanner la page principale de votre passeport ou carte d'identité pour validation instantanée par reconnaissance de caractères.
+                              </p>
+                              
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPreRegisterStage("scanning");
+                                  setTimeout(() => {
+                                    setPreRegisterStage("done");
+                                  }, 2000);
+                                }}
+                                className="w-full py-4 border border-dashed border-white/25 rounded-xl hover:border-elite-gold flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-white/[0.01] transition-colors"
+                              >
+                                <span className="text-lg">📷</span>
+                                <span className="text-[10px] text-stone-300 font-bold">Scanner mon Passeport</span>
+                                <span className="text-[8px] text-stone-500">Formats supportés: JPEG, PNG, PDF</span>
+                              </button>
+                            </div>
+                          )}
+
+                          {preRegisterStage === "scanning" && (
+                            <div className="flex flex-col items-center justify-center py-6 space-y-3">
+                              <div className="w-8 h-8 border-2 border-elite-gold border-t-transparent rounded-full animate-spin" />
+                              <p className="text-[9px] text-stone-400 font-mono">Lecture optique de la puce RFID...</p>
+                            </div>
+                          )}
+
+                          {preRegisterStage === "done" && (
+                            <div className="space-y-3 animate-fade-in">
+                              <div className="p-3 bg-emerald-500/10 border border-emerald-500/25 rounded-xl flex items-center gap-3">
+                                <CheckCircle2 className="text-emerald-400 flex-shrink-0" size={20} />
+                                <div>
+                                  <span className="text-[10px] font-bold text-white block">Passeport enregistré</span>
+                                  <span className="text-[8px] text-emerald-400 font-light block leading-none mt-0.5">Vérifié via IA (Nationalité: Française/Béninoise)</span>
+                                </div>
+                              </div>
+                              <p className="text-[9px] text-stone-400 leading-relaxed">
+                                Votre enregistrement est validé ! Votre clé numérique de chambre a été générée. Présentez-vous directement à la réception pour récupérer votre badge en 5 secondes.
+                              </p>
+                            </div>
+                          )}
+                        
+                          {preRegisterStage === "done" && (
+                            <button
+                              type="button"
+                              onClick={() => setPreRegisterStage("none")}
+                              className="w-full bg-white/5 border border-white/10 hover:bg-white/10 text-white py-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                            >
+                              Retour à la messagerie
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* VIEW 2: PMS DASHBOARD (THE WOW REAL-WORLD PORTAL FOR THE HOTEL MANAGER) */}
+                {successView === "pms" && (
+                  <div className="space-y-3.5 flex-grow text-left animate-fade-in overflow-y-auto max-h-[320px] pr-1">
+                    
+                    {/* STATS HEADER */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-stone-900 border border-white/5 p-2 rounded-xl text-center">
+                        <span className="text-[8px] text-stone-500 uppercase block font-bold">Occupation</span>
+                        <span className="text-xs font-bold text-white font-mono">75%</span>
+                      </div>
+                      <div className="bg-stone-900 border border-white/5 p-2 rounded-xl text-center">
+                        <span className="text-[8px] text-stone-500 uppercase block font-bold">Ventes Dir.</span>
+                        <span className="text-xs font-bold text-emerald-400 font-mono">+12%</span>
+                      </div>
+                      <div className="bg-stone-900 border border-white/5 p-2 rounded-xl text-center">
+                        <span className="text-[8px] text-stone-500 uppercase block font-bold">Net Acompte</span>
+                        <span className="text-xs font-bold text-elite-gold font-mono">{depositRequired > 10000 ? `${depositRequired / 1000}k` : "10k"}</span>
+                      </div>
+                    </div>
+
+                    {/* TIMELINE / OCCUPANCY GRID */}
+                    <div className="bg-stone-950 border border-white/5 p-3 rounded-xl space-y-2">
+                      <div className="flex justify-between items-center text-[8px] font-bold text-stone-400 pb-1.5 border-b border-white/5">
+                        <span>PLANNING DES CHAMBRES (Aujourd'hui)</span>
+                        <span className="text-emerald-400">En direct</span>
+                      </div>
+                      <div className="space-y-1.5 font-mono text-[9px]">
+                        {[
+                          { room: "Chambre 101", cat: "Executive", status: "Occupée", guest: "M. KOFFI", cls: "bg-blue-500/20 text-blue-400 border-blue-500/20" },
+                          { room: "Chambre 102", cat: "Executive", status: "Propre / Libre", guest: "Aucun", cls: "bg-emerald-500/20 text-emerald-400 border-emerald-500/20" },
+                          { room: "Suite 201", cat: "Prestige", status: "Arrivée Prévue", guest: formData.name || "M. DUPONT", cls: "bg-amber-500/30 text-elite-gold border-elite-gold/30 animate-pulse font-bold" },
+                          { room: "Suite 202", cat: "Royale", status: "En nettoyage", guest: "Départ ce matin", cls: "bg-stone-800 text-stone-400 border-stone-700" }
+                        ].map((rm, idx) => (
+                          <div key={idx} className="flex justify-between items-center p-1.5 rounded-lg border border-transparent bg-white/[0.01]">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-white">{rm.room}</span>
+                              <span className="text-[7px] text-stone-500">({rm.cat})</span>
+                            </div>
+                            <div className={`px-2 py-0.5 rounded text-[8px] border ${rm.cls}`}>
+                              {rm.status} : {rm.guest}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* HOUSEKEEPING & UPSELL ALERTS */}
+                    <div className="bg-stone-950 border border-white/5 p-3 rounded-xl space-y-2">
+                      <div className="text-[8px] font-bold text-stone-400 pb-1.5 border-b border-white/5 flex items-center gap-1">
+                        <ListChecks size={10} />
+                        <span>LOGISTIQUE & ACCUEIL VIP</span>
+                      </div>
+                      <ul className="text-[9px] space-y-1.5 text-stone-300">
+                        <li className="flex items-center gap-2">
+                          <span className="text-emerald-400">✓</span>
+                          <span>FedaPay Transaction `TX-{Math.floor(Math.random() * 90000 + 10000)}` : <strong>PAYÉE</strong></span>
+                        </li>
+                        {formData.shuttle && (
+                          <li className="flex items-center gap-2">
+                            <span className="text-amber-400">🚖</span>
+                            <span>Alerte Chauffeur : Navette aéroport Cadjehoun activée.</span>
+                          </li>
+                        )}
+                        {formData.champagne && (
+                          <li className="flex items-center gap-2">
+                            <span className="text-amber-400">🍾</span>
+                            <span>Accueil VIP : Placer bouteille de Champagne au frais en Suite 201.</span>
+                          </li>
+                        )}
+                        {bookingType === "room" && (
+                          <li className="flex items-center gap-2 text-stone-400 font-sans">
+                            <span className="text-stone-500">•</span>
+                            <span>Statut d'enregistrement en ligne (Pre-check-in) : <strong>{preRegisterStage === "done" ? "COMPLÉTÉ (Passeport scanné)" : "En attente client"}</strong></span>
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+                <button
+                  onClick={resetSandbox}
+                  className="w-full border border-white/10 hover:border-white/20 text-stone-400 hover:text-white py-3.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer hover:bg-white/[0.02]"
+                >
+                  Simuler une nouvelle réservation
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
